@@ -21,14 +21,14 @@
 // TCS3200 Farbsensor – alles ueber Stecker erreichbar
 // S0/S1 am TCS3200-Modul direkt auf VCC loeten (100 % Frequenz)
 #define PIN_TCS_S2          PC4      // Y-Endstop-Stecker  (Signal-Pin)
-#define PIN_TCS_S3          PA1      // Thermistor-Stecker T_Bed (Signal-Pin)
-#define PIN_TCS_OUT         PA7      // Z-Endstop-Stecker  (Signal-Pin)
-// TCS3200 Stromversorgung: VCC + GND vom Z-Endstop-Stecker
+#define PIN_TCS_S3          PC0      // Thermistor-Stecker TB (Signal-Pin, hat 4k7 Pullup)
+#define PIN_TCS_OUT         PA7      // Z-Endstop-Stecker  (Signal-Pin, 5V-tolerant)
+// TCS3200 VCC+GND: 3.3V vom Z-Endstop-Stecker (oder 5V vom BL-Touch)
 
-// Taster – Thermistor-Stecker T0 (hat Board-Pullup)
-#define PIN_BUTTON          PA0
+// Taster – Thermistor-Stecker TH (Signal+GND, hat 4k7 Pullup)
+#define PIN_BUTTON          PC1
 
-// Summer (onboard)
+// Summer – BL-Touch-Stecker Pin 3 (Servo-Signal PB0)
 #define PIN_BUZZER          PB0
 
 // Unbenutzte Treiber abschalten
