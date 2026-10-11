@@ -41,8 +41,10 @@
 //  Stepper-Konfiguration
 // =============================================================
 #define STEPS_PER_REV           3200 // 200 Vollschritte * 16 Mikroschritte
-#define NUM_BINS                17
-#define STEPS_PER_BIN           188  // 3200 / 17 ≈ 188
+#define NUM_BINS                18
+#define SORT_ARC_DEG            270  // Boxen verteilt auf 270°
+#define SORT_ARC_STEPS          2400 // 3200 * 270 / 360
+#define STEPS_PER_BIN           133  // 2400 / 18 ≈ 133
 
 #define FEED_STEP_US            2000 // Schrittperiode Zufuehrrad  (langsam)
 #define SORT_STEP_US            600  // Schrittperiode Sortierer   (schnell)

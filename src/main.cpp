@@ -20,7 +20,7 @@ static const char* colorNames[] = {
     "Gelb",      "Gruen",      "Orange",     "Pink",
     "Lila",      "Braun",      "Hellblau",   "Hellgruen",
     "Dunkelblau","Dunkelgruen","Grau",       "Beige",
-    "Unbekannt"
+    "Transparent","Unbekannt"
 };
 
 static CalData  cal;
@@ -137,18 +137,12 @@ static uint8_t classifyColor() {
 }
 
 // =============================================================
-//  Sortierer – kuerzesten Weg zum Fach fahren
+//  Sortierer – direkt zum Fach fahren (270°-Bogen, kein Umlauf)
 // =============================================================
 static void moveToBin(uint8_t bin) {
-    int32_t target  = (int32_t)bin * STEPS_PER_BIN;
-    int32_t forward = ((target - sortPos) % STEPS_PER_REV + STEPS_PER_REV) % STEPS_PER_REV;
-
-    if (forward <= STEPS_PER_REV / 2) {
-        stepper_move(PIN_SORT_STEP, PIN_SORT_DIR, forward, SORT_STEP_US);
-    } else {
-        int32_t backward = STEPS_PER_REV - forward;
-        stepper_move(PIN_SORT_STEP, PIN_SORT_DIR, -(int32_t)backward, SORT_STEP_US);
-    }
+    int32_t target = (int32_t)bin * STEPS_PER_BIN;
+    int32_t diff   = target - sortPos;
+    stepper_move(PIN_SORT_STEP, PIN_SORT_DIR, diff, SORT_STEP_US);
     sortPos = target;
 }
 
