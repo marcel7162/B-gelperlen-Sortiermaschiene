@@ -15,20 +15,17 @@
 #define PIN_SORT_DIR        PB7
 #define PIN_SORT_EN         PC3      // gemeinsamer Enable mit Motor 1
 
-// Gabellichtschranken (active LOW)
-#define PIN_SORT_HOME       PC5      // X-Endstop – Sortierer Homeposition
-#define PIN_FEED_HOME       PC4      // Y-Endstop – Rad-Referenz (optional)
+// Gabellichtschranke (active LOW)
+#define PIN_SORT_HOME       PC5      // X-Endstop-Stecker – Sortierer Home
 
-// TCS3200 Farbsensor
-// S0/S1 fest auf VCC loeten (100 % Frequenzskalierung)
-// Falls per MCU gesteuert, Kommentar entfernen:
-// #define PIN_TCS_S0       PB4
-// #define PIN_TCS_S1       PB3
-#define PIN_TCS_S2          PB6      // Z-STEP MCU-Pin
-#define PIN_TCS_S3          PB5      // Z-DIR  MCU-Pin
-#define PIN_TCS_OUT         PA7      // Z-Endstop-Anschluss
+// TCS3200 Farbsensor – alles ueber Stecker erreichbar
+// S0/S1 am TCS3200-Modul direkt auf VCC loeten (100 % Frequenz)
+#define PIN_TCS_S2          PC4      // Y-Endstop-Stecker  (Signal-Pin)
+#define PIN_TCS_S3          PA1      // Thermistor-Stecker T_Bed (Signal-Pin)
+#define PIN_TCS_OUT         PA7      // Z-Endstop-Stecker  (Signal-Pin)
+// TCS3200 Stromversorgung: VCC + GND vom Z-Endstop-Stecker
 
-// Taster – Thermistor-Anschluss T0 (hat Board-Pullup)
+// Taster – Thermistor-Stecker T0 (hat Board-Pullup)
 #define PIN_BUTTON          PA0
 
 // Summer (onboard)

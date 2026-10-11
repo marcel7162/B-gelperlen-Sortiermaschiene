@@ -252,7 +252,6 @@ void setup() {
     pinMode(PIN_BUTTON,    INPUT_PULLUP);
     pinMode(PIN_BUZZER,    OUTPUT);
     pinMode(PIN_SORT_HOME, INPUT_PULLUP);
-    pinMode(PIN_FEED_HOME, INPUT_PULLUP);
 
     stepper_init();
     tcs_init();
