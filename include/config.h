@@ -18,18 +18,18 @@
 // Gabellichtschranke (active LOW)
 #define PIN_SORT_HOME       PC5      // X-Endstop-Stecker – Sortierer Home
 
-// TCS3200 Farbsensor – alles ueber Stecker erreichbar
+// TCS3200 Farbsensor – alles am LCD-Stecker (EXP1)
 // S0/S1 am TCS3200-Modul direkt auf VCC loeten (100 % Frequenz)
-#define PIN_TCS_S2          PC4      // Y-Endstop-Stecker  (Signal-Pin)
-#define PIN_TCS_S3          PC0      // Thermistor-Stecker TB (Signal-Pin, hat 4k7 Pullup)
-#define PIN_TCS_OUT         PA7      // Z-Endstop-Stecker  (Signal-Pin, 5V-tolerant)
-// TCS3200 VCC+GND: 3.3V vom Z-Endstop-Stecker (oder 5V vom BL-Touch)
+// TCS3200 VCC → LCD 5V,  GND → LCD GND
+#define PIN_TCS_S2          PB10     // LCD-Stecker
+#define PIN_TCS_S3          PB11     // LCD-Stecker
+#define PIN_TCS_OUT         PB12     // LCD-Stecker (5V-tolerant, EXTI-faehig)
 
-// Taster – Thermistor-Stecker TH (Signal+GND, hat 4k7 Pullup)
-#define PIN_BUTTON          PC1
+// Taster – LCD-Stecker (interner Pullup per Software)
+#define PIN_BUTTON          PB13     // LCD-Stecker
 
-// Summer – BL-Touch-Stecker Pin 3 (Servo-Signal PB0)
-#define PIN_BUZZER          PB0
+// Summer – LCD-Stecker
+#define PIN_BUZZER          PB14     // LCD-Stecker
 
 // Unbenutzte Treiber abschalten
 #define PIN_ZE_EN           PA15     // Enable Z+E Treiber (nicht benutzt)
