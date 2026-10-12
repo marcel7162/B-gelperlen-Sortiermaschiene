@@ -30,7 +30,8 @@ static void printHelp() {
         "detect          Perle vorhanden?\r\n"
         "scan            Dauermessung (Enter stoppt)\r\n"
         "\r\n--- Kalibrierung ---\r\n"
-        "cal             Kalibrierung starten\r\n"
+        "cal             Kalibrierung (fragt Anzahl)\r\n"
+        "cal <n>         Einzelne Farbe n kalibrieren\r\n"
         "dump            Kalibrierdaten anzeigen\r\n"
         "save            Einstellungen speichern\r\n"
         "load            Einstellungen laden\r\n"
@@ -66,6 +67,8 @@ static void printStatus() {
     Serial.println(sorting ? F("LAEUFT") : F("GESTOPPT"));
     Serial.print(F("Kalibriert: "));
     Serial.println(calibrated ? F("Ja") : F("Nein"));
+    Serial.print(F("Farben:     "));
+    Serial.println(cal.numColors);
     Serial.print(F("Perlen:     "));
     Serial.println(beadCount);
     Serial.print(F("Sort-Pos:   "));
@@ -150,9 +153,11 @@ static void cmdDump() {
     Serial.println(F("\r\n=== KALIBRIERDATEN ==="));
     Serial.print(F("Magic:    0x")); Serial.println(cal.magic, HEX);
     Serial.print(F("Baseline: ")); Serial.println(cal.baseC);
+    Serial.print(F("Farben:   ")); Serial.println(cal.numColors);
     Serial.println(F("\r\nFach  Farbe          R     G     B"));
     Serial.println(F("----  -------------- ----- ----- -----"));
-    for (uint8_t i = 0; i < MAX_COLORS; i++) {
+    uint8_t n = cal.numColors > 0 ? cal.numColors : MAX_COLORS;
+    for (uint8_t i = 0; i < n; i++) {
         if (i < 10) Serial.print(' ');
         Serial.print(i);
         Serial.print(F("    "));
@@ -174,7 +179,7 @@ static void cmdColor() {
     Serial.print(F("Norm: R=")); Serial.print(nr);
     Serial.print(F(" G=")); Serial.print(ng);
     Serial.print(F(" B=")); Serial.println(nb);
-    Serial.print(F("Farbe: ")); Serial.print(colorNames[bin]);
+    Serial.print(F("Farbe: ")); Serial.print(bin < MAX_COLORS ? colorNames[bin] : "Unbekannt");
     Serial.print(F(" (Fach ")); Serial.print(bin);
     Serial.println(F(")"));
 }
@@ -300,9 +305,15 @@ static void processCommand(char* cmd) {
     else if (strcmp(cmd, "scan") == 0) {
         cmdScan();
     }
-    else if (strcmp(cmd, "cal") == 0) {
+    else if (strncmp(cmd, "cal", 3) == 0) {
         sorting = false;
-        runCalibration();
+        char* arg = cmd + 3;
+        while (*arg == ' ') arg++;
+        if (*arg >= '0' && *arg <= '9') {
+            calibrateColor(atoi(arg));
+        } else {
+            runCalibration();
+        }
     }
     else if (strcmp(cmd, "dump") == 0) {
         cmdDump();

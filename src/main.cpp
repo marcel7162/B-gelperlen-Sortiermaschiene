@@ -135,7 +135,10 @@ void saveCal() {
 
 bool loadCal() {
     EEPROM.get(0, cal);
-    return cal.magic == CAL_MAGIC;
+    if (cal.magic != CAL_MAGIC) return false;
+    if (cal.numColors == 0 || cal.numColors > MAX_COLORS)
+        cal.numColors = MAX_COLORS;
+    return true;
 }
 
 // =============================================================
@@ -185,12 +188,12 @@ uint8_t classifyColor() {
     uint16_t nr, ng, nb;
     readColorNorm(&nr, &ng, &nb);
 
-    if (nr == 0 && ng == 0 && nb == 0) return MAX_COLORS - 1;
+    if (nr == 0 && ng == 0 && nb == 0) return cal.numColors;
 
     uint32_t minDist = UINT32_MAX;
-    uint8_t  bestBin = MAX_COLORS - 1;
+    uint8_t  bestBin = cal.numColors;
 
-    for (uint8_t i = 0; i < MAX_COLORS; i++) {
+    for (uint8_t i = 0; i < cal.numColors; i++) {
         int32_t dr = (int32_t)nr - cal.r[i];
         int32_t dg = (int32_t)ng - cal.g[i];
         int32_t db = (int32_t)nb - cal.b[i];
@@ -209,11 +212,12 @@ uint8_t classifyColor() {
         Serial.print(F("  [cls] nR=")); Serial.print(nr);
         Serial.print(F(" nG=")); Serial.print(ng);
         Serial.print(F(" nB=")); Serial.print(nb);
-        Serial.print(F(" -> ")); Serial.print(colorNames[bestBin]);
+        Serial.print(F(" -> "));
+        Serial.print(bestBin < MAX_COLORS ? colorNames[bestBin] : "Unbekannt");
         Serial.print(F(" dist=")); Serial.println(minDist);
     }
 
-    if (minDist > cfg.maxColorDist) return MAX_COLORS - 1;
+    if (minDist > cfg.maxColorDist) return cal.numColors;
     return bestBin;
 }
 
@@ -275,7 +279,8 @@ void sortOneBead() {
     uint8_t bin = classifyColor();
 
     Serial.print(F("Perle #")); Serial.print(beadCount);
-    Serial.print(F(" -> ")); Serial.print(colorNames[bin]);
+    Serial.print(F(" -> "));
+    Serial.print(bin < MAX_COLORS ? colorNames[bin] : "Unbekannt");
     Serial.print(F(" (Fach ")); Serial.print(bin);
     Serial.println(F(")"));
 
@@ -296,66 +301,97 @@ void sortOneBead() {
 // =============================================================
 //  Kalibrierung
 // =============================================================
-void runCalibration() {
-    Serial.println(F("\r\n=== KALIBRIERUNG ==="));
-    beepOK(); delay(150); beepOK(); delay(150); beepOK();
-
-    delay(500);
-    measureBaseline();
-    beepLong();
-
-    Serial.println(F("\r\n18 Perlen einlegen (Reihenfolge):"));
-    for (uint8_t i = 0; i < MAX_COLORS; i++) {
-        Serial.print(F("  Fach "));
-        if (i < 10) Serial.print(' ');
-        Serial.print(i);
-        Serial.print(F(": "));
-        Serial.println(colorNames[i]);
+void calibrateColor(uint8_t idx) {
+    if (idx >= MAX_COLORS) {
+        Serial.print(F("Ungueltig! Max ")); Serial.println(MAX_COLORS - 1);
+        return;
     }
 
-    Serial.println(F("\r\nPerlen eingelegt? Weiter mit Enter/Taster."));
+    Serial.print(F("\r\nKalibriere Farbe ")); Serial.print(idx);
+    Serial.print(F(" ("));
+    Serial.print(idx < MAX_COLORS ? colorNames[idx] : "?");
+    Serial.println(F(")"));
+    Serial.println(F("Perle auf Sensor legen, Enter druecken."));
     if (!waitForInput()) return;
+
+    readColorNorm(&cal.r[idx], &cal.g[idx], &cal.b[idx]);
+
+    Serial.print(F("  R=")); Serial.print(cal.r[idx]);
+    Serial.print(F(" G=")); Serial.print(cal.g[idx]);
+    Serial.print(F(" B=")); Serial.println(cal.b[idx]);
+
+    if (idx >= cal.numColors) cal.numColors = idx + 1;
+    saveCal();
+    calibrated = true;
+    beepOK();
+    Serial.print(F("Farbe ")); Serial.print(idx);
+    Serial.println(F(" gespeichert."));
+    Serial.print(F("Kalibrierte Farben: ")); Serial.println(cal.numColors);
+}
+
+void runCalibration() {
+    Serial.println(F("\r\n=== KALIBRIERUNG ==="));
+    Serial.println(F("Wie viele Farben? (1-18, Enter = bisherige beibehalten)"));
+
+    char numBuf[8];
+    uint8_t numLen = 0;
+    while (true) {
+        if (Serial.available()) {
+            char c = Serial.read();
+            if (c == 'q' || c == 'Q') return;
+            if (c == '\r' || c == '\n') break;
+            if (c >= '0' && c <= '9' && numLen < 4) {
+                numBuf[numLen++] = c;
+                Serial.print(c);
+            }
+        }
+    }
+    numBuf[numLen] = '\0';
+    Serial.println();
+
+    uint8_t count = 0;
+    if (numLen > 0) {
+        count = atoi(numBuf);
+        if (count > MAX_COLORS) count = MAX_COLORS;
+        if (count == 0) count = 1;
+    } else {
+        count = cal.numColors > 0 ? cal.numColors : MAX_COLORS;
+    }
+
+    Serial.print(F("Kalibriere ")); Serial.print(count);
+    Serial.println(F(" Farben.\r\n"));
+
+    measureBaseline();
     beepOK();
 
-    stepper_enable(true);
-    for (uint8_t i = 0; i < MAX_COLORS; i++) {
-        Serial.print(F("\r\nWarte auf Perle "));
-        Serial.print(i);
+    for (uint8_t i = 0; i < count; i++) {
+        Serial.print(F("\r\nFarbe ")); Serial.print(i);
+        Serial.print(F(" / ")); Serial.print(count);
         Serial.print(F(" ("));
         Serial.print(colorNames[i]);
-        Serial.println(F(")..."));
-
-        bool found = false;
-        for (int32_t s = 0; s < STEPS_PER_REV; s++) {
-            stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, 1, cfg.feedStepUs);
-            if (beadDetected()) { found = true; break; }
-        }
-
-        if (!found) {
-            Serial.println(F("  Keine Perle gefunden – nochmal einlegen!"));
-            Serial.println(F("  Enter = nochmal, 'q' = abbrechen"));
-            if (!waitForInput()) return;
-            beepError();
-            i--;
-            continue;
+        Serial.println(F(")"));
+        Serial.println(F("Perle auf Sensor legen, Enter = messen, 'q' = fertig"));
+        if (!waitForInput()) {
+            Serial.println(F("Abgebrochen."));
+            break;
         }
 
         readColorNorm(&cal.r[i], &cal.g[i], &cal.b[i]);
 
         Serial.print(F("  R=")); Serial.print(cal.r[i]);
-        Serial.print(F(" G="));  Serial.print(cal.g[i]);
+        Serial.print(F(" G=")); Serial.print(cal.g[i]);
         Serial.print(F(" B=")); Serial.println(cal.b[i]);
         beepOK();
 
-        stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);
-        delay(300);
+        cal.numColors = i + 1;
     }
 
     saveCal();
     saveCfg();
     calibrated = true;
-    Serial.println(F("\r\nKalibrierung gespeichert!"));
-    beepLong(); delay(200); beepLong(); delay(200); beepLong();
+    Serial.print(F("\r\nKalibrierung gespeichert! Farben: "));
+    Serial.println(cal.numColors);
+    beepLong();
 }
 
 // =============================================================
@@ -480,7 +516,8 @@ void loop() {
         uint8_t bin = classifyColor();
 
         Serial.print(F("\r\nPerle #")); Serial.print(beadCount);
-        Serial.print(F(" -> ")); Serial.print(colorNames[bin]);
+        Serial.print(F(" -> "));
+        Serial.print(bin < MAX_COLORS ? colorNames[bin] : "Unbekannt");
         Serial.print(F(" (Fach ")); Serial.print(bin);
         Serial.println(F(")"));
 

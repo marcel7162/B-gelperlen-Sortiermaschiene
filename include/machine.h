@@ -4,6 +4,7 @@
 struct CalData {
     uint16_t magic;
     uint16_t baseC;
+    uint8_t  numColors;
     uint16_t r[MAX_COLORS];
     uint16_t g[MAX_COLORS];
     uint16_t b[MAX_COLORS];
@@ -50,5 +51,6 @@ void    saveCfg();
 bool    loadCfg();
 void    cfgDefaults();
 void    runCalibration();
+void    calibrateColor(uint8_t idx);
 void    sortOneBead();
 void    startupWizard();
