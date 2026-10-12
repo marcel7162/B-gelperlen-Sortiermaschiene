@@ -8,6 +8,8 @@
 
 static char    cmdBuf[80];
 static uint8_t cmdLen = 0;
+static char    lastCmd[80];
+static uint8_t escState = 0;
 
 // ---------------------------------------------------------------
 static void printHelp() {
@@ -469,9 +471,28 @@ void shell_init() {
 void shell_poll() {
     while (Serial.available()) {
         char c = Serial.read();
+
+        if (escState == 1) {
+            escState = (c == '[') ? 2 : 0;
+            continue;
+        }
+        if (escState == 2) {
+            escState = 0;
+            if (c == 'A' && lastCmd[0]) {
+                while (cmdLen > 0) { Serial.print(F("\b \b")); cmdLen--; }
+                strcpy(cmdBuf, lastCmd);
+                cmdLen = strlen(cmdBuf);
+                Serial.print(cmdBuf);
+            }
+            continue;
+        }
+
+        if (c == 0x1B) { escState = 1; continue; }
+
         if (c == '\n' || c == '\r') {
             if (cmdLen > 0) {
                 cmdBuf[cmdLen] = '\0';
+                strcpy(lastCmd, cmdBuf);
                 Serial.println();
                 processCommand(cmdBuf);
                 cmdLen = 0;
