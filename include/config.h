@@ -18,21 +18,21 @@
 // Gabellichtschranke
 // HOME_ACTIVE_STATE: LOW = Schlitz frei (Fahne draussen bei Home)
 //                    HIGH = Schlitz blockiert (Fahne drin bei Home)
-#define PIN_SORT_HOME       PC5      // X-Endstop-Stecker – Sortierer Home
+#define PIN_SORT_HOME       PA4      // Gabellichtschranke Sortierer Home
 #define HOME_ACTIVE_STATE   HIGH     // Fahne blockiert Schlitz an Home-Position
 
-// TCS3200 Farbsensor – alles am LCD-Stecker (EXP1)
+// TCS3200 Farbsensor – LCD-Stecker (EXP1)
 // S0/S1 am TCS3200-Modul direkt auf VCC loeten (100 % Frequenz)
 // TCS3200 VCC → LCD 5V,  GND → LCD GND
-#define PIN_TCS_S2          PB10     // LCD-Stecker
-#define PIN_TCS_S3          PB11     // LCD-Stecker
-#define PIN_TCS_OUT         PB12     // LCD-Stecker (5V-tolerant, EXTI-faehig)
+#define PIN_TCS_S2          PB12     // LCD-Stecker
+#define PIN_TCS_S3          PB15     // LCD-Stecker
+#define PIN_TCS_OUT         PB13     // LCD-Stecker (5V-tolerant, EXTI-faehig)
 
 // Taster – LCD-Stecker (interner Pullup per Software)
-#define PIN_BUTTON          PB13     // LCD-Stecker
+#define PIN_BUTTON          PB10     // LCD-Stecker
 
 // Summer – LCD-Stecker
-#define PIN_BUZZER          PB14     // LCD-Stecker
+#define PIN_BUZZER          PB11     // LCD-Stecker
 
 // Unbenutzte Treiber abschalten
 #define PIN_ZE_EN           PA15     // Enable Z+E Treiber (nicht benutzt)
