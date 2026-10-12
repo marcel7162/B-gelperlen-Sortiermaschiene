@@ -89,6 +89,42 @@ static bool buttonPressed() {
     return true;
 }
 
+// Wartet auf Taster ODER Enter. Gibt false bei 'q' (Abbruch).
+static bool waitForInput() {
+    Serial.println(F("  (Enter oder Taster, 'q' = Abbruch)"));
+    while (true) {
+        if (buttonPressed()) return true;
+        if (Serial.available()) {
+            char c = Serial.read();
+            if (c == 'q' || c == 'Q') {
+                while (Serial.available()) Serial.read();
+                Serial.println(F("Abgebrochen."));
+                return false;
+            }
+            if (c == '\n' || c == '\r') {
+                while (Serial.available()) Serial.read();
+                return true;
+            }
+        }
+        delay(10);
+    }
+}
+
+// Prueft ob Taster ODER Serial-Eingabe vorliegt (nicht-blockierend)
+static bool inputAvailable() {
+    if (buttonPressed()) return true;
+    if (Serial.available()) {
+        char c = Serial.peek();
+        if (c == '\n' || c == '\r') {
+            Serial.read();
+            while (Serial.available() && (Serial.peek() == '\n' || Serial.peek() == '\r'))
+                Serial.read();
+            return true;
+        }
+    }
+    return false;
+}
+
 // =============================================================
 //  EEPROM – Kalibrierdaten
 // =============================================================
@@ -268,21 +304,22 @@ void runCalibration() {
     measureBaseline();
     beepLong();
 
-    Serial.println(F("18 Perlen einlegen, dann Taster druecken."));
-    Serial.println(F("Reihenfolge:"));
+    Serial.println(F("\r\n18 Perlen einlegen (Reihenfolge):"));
     for (uint8_t i = 0; i < MAX_COLORS; i++) {
         Serial.print(F("  Fach "));
+        if (i < 10) Serial.print(' ');
         Serial.print(i);
         Serial.print(F(": "));
         Serial.println(colorNames[i]);
     }
 
-    while (!buttonPressed()) delay(10);
+    Serial.println(F("\r\nPerlen eingelegt? Weiter mit Enter/Taster."));
+    if (!waitForInput()) return;
     beepOK();
 
     stepper_enable(true);
     for (uint8_t i = 0; i < MAX_COLORS; i++) {
-        Serial.print(F("Warte auf Perle "));
+        Serial.print(F("\r\nWarte auf Perle "));
         Serial.print(i);
         Serial.print(F(" ("));
         Serial.print(colorNames[i]);
@@ -295,7 +332,9 @@ void runCalibration() {
         }
 
         if (!found) {
-            Serial.println(F("  Keine Perle – nochmal!"));
+            Serial.println(F("  Keine Perle gefunden – nochmal einlegen!"));
+            Serial.println(F("  Enter = nochmal, 'q' = abbrechen"));
+            if (!waitForInput()) return;
             beepError();
             i--;
             continue;
@@ -315,8 +354,68 @@ void runCalibration() {
     saveCal();
     saveCfg();
     calibrated = true;
-    Serial.println(F("Kalibrierung gespeichert!"));
+    Serial.println(F("\r\nKalibrierung gespeichert!"));
     beepLong(); delay(200); beepLong(); delay(200); beepLong();
+}
+
+// =============================================================
+//  Startup-Assistent
+// =============================================================
+static void startupWizard() {
+    Serial.println(F("\r\n--- HARDWARE-TEST ---\r\n"));
+
+    // 1) Summer
+    Serial.println(F("[1] Summer testen..."));
+    beepOK();
+    Serial.println(F("     Beep OK\r\n"));
+
+    // 2) Farbsensor Rohwerte
+    Serial.println(F("[2] Farbsensor Rohwerte:"));
+    for (int i = 0; i < 3; i++) {
+        RGB raw = tcs_read();
+        Serial.print(F("     R=")); Serial.print(raw.r);
+        Serial.print(F(" G=")); Serial.print(raw.g);
+        Serial.print(F(" B=")); Serial.print(raw.b);
+        Serial.print(F(" C=")); Serial.println(raw.c);
+        delay(200);
+    }
+
+    // 3) Motoren
+    Serial.println(F("\r\n[3] Motoren testen..."));
+    stepper_enable(true);
+
+    Serial.println(F("     Zufuehrrad 100 Schritte..."));
+    stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, 100, cfg.feedStepUs);
+    delay(300);
+    stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, -100, cfg.feedStepUs);
+    Serial.println(F("     OK"));
+
+    Serial.println(F("     Sortierer 200 Schritte..."));
+    stepper_move(PIN_SORT_STEP, PIN_SORT_DIR, 200, cfg.sortStepUs);
+    delay(300);
+    stepper_move(PIN_SORT_STEP, PIN_SORT_DIR, -200, cfg.sortStepUs);
+    Serial.println(F("     OK"));
+
+    // 4) Endstop
+    Serial.print(F("\r\n[4] Lichtschranke: "));
+    Serial.println(digitalRead(PIN_SORT_HOME) == HOME_ACTIVE_STATE
+                   ? F("AUSGELOEST") : F("frei"));
+
+    // 5) Homing
+    Serial.println(F("\r\n[5] Homing..."));
+    if (homeSorter()) {
+        beepOK();
+    } else {
+        beepError();
+        Serial.println(F("     Homing fehlgeschlagen!"));
+        Serial.println(F("     Weiter mit Shell ('home' zum Wiederholen)"));
+    }
+
+    // 6) Baseline
+    Serial.println(F("\r\n[6] Baseline messen..."));
+    measureBaseline();
+
+    Serial.println(F("\r\n--- TEST ABGESCHLOSSEN ---\r\n"));
 }
 
 // =============================================================
@@ -338,39 +437,23 @@ void setup() {
     tcs_init();
 
     cfgDefaults();
-
-    beepOK();
-    delay(500);
-
-    bool wantCal = buttonDown();
-    if (wantCal) {
-        while (buttonDown()) delay(10);
-    }
-
     calibrated = loadCal();
     loadCfg();
 
-    if (wantCal || !calibrated) {
-        runCalibration();
-    }
-
-    stepper_enable(true);
-
-    if (!homeSorter()) {
-        beepError(); beepError();
-        Serial.println(F("Home fehlgeschlagen – Shell aktiv."));
-        shell_init();
-        return;
-    }
-
-    measureBaseline();
+    // Hardware-Test beim Start
+    startupWizard();
     saveCal();
 
-    sorting = true;
-    beepOK(); delay(100); beepOK();
-    Serial.println(F("=== SORTIERUNG GESTARTET ==="));
-    Serial.println(F("'stop' zum Anhalten, 'help' fuer alle Befehle"));
+    if (calibrated) {
+        Serial.println(F("Kalibrierdaten aus EEPROM geladen."));
+        Serial.println(F("'run' = Sortierung starten"));
+        Serial.println(F("'cal' = neu kalibrieren"));
+    } else {
+        Serial.println(F("Keine Kalibrierdaten vorhanden."));
+        Serial.println(F("'cal' = Kalibrierung starten"));
+    }
 
+    Serial.println(F("'help' = alle Befehle\r\n"));
     shell_init();
 }
 
