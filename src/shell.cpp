@@ -189,10 +189,20 @@ static void cmdColor() {
 // ---------------------------------------------------------------
 static void cmdRaw() {
     RGB raw = tcs_read();
-    Serial.print(F("R=")); Serial.print(raw.r);
+    Serial.print(F("Roh:  R=")); Serial.print(raw.r);
     Serial.print(F(" G=")); Serial.print(raw.g);
     Serial.print(F(" B=")); Serial.print(raw.b);
     Serial.print(F(" C=")); Serial.println(raw.c);
+
+    if (raw.c >= MIN_CLEAR_READING) {
+        Serial.print(F("Norm: R=")); Serial.print((uint32_t)raw.r * 1000 / raw.c);
+        Serial.print(F(" G=")); Serial.print((uint32_t)raw.g * 1000 / raw.c);
+        Serial.print(F(" B=")); Serial.print((uint32_t)raw.b * 1000 / raw.c);
+        Serial.print(F("  (R%=")); Serial.print((uint32_t)raw.r * 100 / (raw.r + raw.g + raw.b));
+        Serial.print(F(" G%=")); Serial.print((uint32_t)raw.g * 100 / (raw.r + raw.g + raw.b));
+        Serial.print(F(" B%=")); Serial.print((uint32_t)raw.b * 100 / (raw.r + raw.g + raw.b));
+        Serial.println(F(")"));
+    }
 }
 
 // ---------------------------------------------------------------

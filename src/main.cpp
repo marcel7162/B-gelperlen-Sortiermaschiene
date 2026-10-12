@@ -165,10 +165,16 @@ void readColorNorm(uint16_t* nr, uint16_t* ng, uint16_t* nb) {
 
     for (int s = 0; s < cfg.colorReadSamples; s++) {
         RGB raw = tcs_read();
+        if (debugMode) {
+            Serial.print(F("  [raw] R=")); Serial.print(raw.r);
+            Serial.print(F(" G=")); Serial.print(raw.g);
+            Serial.print(F(" B=")); Serial.print(raw.b);
+            Serial.print(F(" C=")); Serial.println(raw.c);
+        }
         if (raw.c < MIN_CLEAR_READING) continue;
-        sumR += (uint32_t)raw.r * 255 / raw.c;
-        sumG += (uint32_t)raw.g * 255 / raw.c;
-        sumB += (uint32_t)raw.b * 255 / raw.c;
+        sumR += (uint32_t)raw.r * 1000 / raw.c;
+        sumG += (uint32_t)raw.g * 1000 / raw.c;
+        sumB += (uint32_t)raw.b * 1000 / raw.c;
         valid++;
     }
 

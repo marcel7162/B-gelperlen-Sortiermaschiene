@@ -59,9 +59,9 @@
 // =============================================================
 //  Farbsensor-Konfiguration
 // =============================================================
-#define TCS_SAMPLE_MS           50   // Messzeit pro Kanal (Farblesung)
+#define TCS_SAMPLE_MS           100  // Messzeit pro Kanal (Farblesung)
 #define TCS_FAST_MS             10   // Schnellmessung (Perlenerkennung)
-#define TCS_SETTLE_US           200  // Einschwingzeit nach Kanalwechsel
+#define TCS_SETTLE_US           500  // Einschwingzeit nach Kanalwechsel
 #define BEAD_THRESHOLD          40   // Min. Clear-Differenz fuer Perlenerkennung
 #define MIN_CLEAR_READING       10   // Unter diesem Wert keine Klassifikation
 #define COLOR_READ_SAMPLES      5    // Messwerte zum Mitteln
@@ -72,7 +72,7 @@
 // =============================================================
 //  Kalibrierung – EEPROM
 // =============================================================
-#define CAL_MAGIC               0xBEAD
+#define CAL_MAGIC               0xBEA2
 
 // Periodisches Re-Homing alle N Perlen
 #define REHOME_INTERVAL         50

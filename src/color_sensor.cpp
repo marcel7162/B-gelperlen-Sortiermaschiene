@@ -1,12 +1,5 @@
 #include "color_sensor.h"
 
-static volatile uint32_t _pulseCount;
-static volatile bool     _counting;
-
-static void _tcsISR() {
-    if (_counting) _pulseCount++;
-}
-
 void tcs_init() {
     pinMode(PIN_TCS_S2,  OUTPUT);
     pinMode(PIN_TCS_S3,  OUTPUT);
@@ -20,9 +13,6 @@ void tcs_init() {
     pinMode(PIN_TCS_S1, OUTPUT);
     digitalWrite(PIN_TCS_S1, HIGH);
 #endif
-
-    _counting = false;
-    attachInterrupt(digitalPinToInterrupt(PIN_TCS_OUT), _tcsISR, RISING);
 }
 
 // S2/S3 Belegung:  Red=LL  Blue=LH  Clear=HL  Green=HH
@@ -31,19 +21,21 @@ static uint32_t _readChannel(bool s2, bool s3, uint16_t ms) {
     digitalWrite(PIN_TCS_S3, s3);
     delayMicroseconds(TCS_SETTLE_US);
 
-    noInterrupts();
-    _pulseCount = 0;
-    _counting   = true;
-    interrupts();
+    uint32_t sum = 0;
+    uint8_t  valid = 0;
+    uint8_t  samples = (ms < 20) ? 4 : 10;
 
-    delay(ms);
+    for (uint8_t i = 0; i < samples; i++) {
+        uint32_t pw = pulseIn(PIN_TCS_OUT, LOW, 100000UL);
+        if (pw == 0) continue;
+        sum += pw;
+        valid++;
+    }
 
-    noInterrupts();
-    _counting = false;
-    uint32_t count = _pulseCount;
-    interrupts();
-
-    return count;
+    if (valid == 0) return 0;
+    uint32_t avgPeriod = sum / valid;
+    if (avgPeriod == 0) return 0;
+    return 1000000UL / avgPeriod;
 }
 
 RGB tcs_read() {
