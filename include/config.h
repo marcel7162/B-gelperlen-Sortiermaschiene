@@ -6,13 +6,13 @@
 // =============================================================
 
 // Motor 1: Zufuehrrad – X-Stepper-Port
-#define PIN_FEED_STEP       PC2
-#define PIN_FEED_DIR        PB9
+#define PIN_FEED_STEP       PB9
+#define PIN_FEED_DIR        PC2
 #define PIN_FEED_EN         PC3
 
 // Motor 2: Sortierer – Y-Stepper-Port
-#define PIN_SORT_STEP       PB8
-#define PIN_SORT_DIR        PB7
+#define PIN_SORT_STEP       PB7
+#define PIN_SORT_DIR        PB8
 #define PIN_SORT_EN         PC3      // gemeinsamer Enable mit Motor 1
 
 // Gabellichtschranke

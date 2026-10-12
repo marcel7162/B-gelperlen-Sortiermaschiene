@@ -83,10 +83,10 @@ static void printStatus() {
 static void printPins() {
     Serial.println(F(
         "\r\n=== PIN-BELEGUNG ===\r\n"
-        "Feed Step:    PC2   (X-Step)\r\n"
-        "Feed Dir:     PB9   (X-Dir)\r\n"
-        "Sort Step:    PB8   (Y-Step)\r\n"
-        "Sort Dir:     PB7   (Y-Dir)\r\n"
+        "Feed Step:    PB9   (X-Step)\r\n"
+        "Feed Dir:     PC2   (X-Dir)\r\n"
+        "Sort Step:    PB7   (Y-Step)\r\n"
+        "Sort Dir:     PB8   (Y-Dir)\r\n"
         "Enable:       PC3   (X/Y-EN)\r\n"
         "Lichtschranke:PA4\r\n"
         "TCS S2:       PB12  (LCD)\r\n"
@@ -361,7 +361,7 @@ static void processCommand(char* cmd) {
         }
         else if (strcmp(args, "feed") == 0) {
             Serial.println(F("Zufuehrrad: 200 vor, 200 zurueck..."));
-            Serial.print(F("  Step=PC2 Dir=PB9 Speed=")); Serial.print(cfg.feedStepUs); Serial.println(F("us"));
+            Serial.print(F("  Step=PB9 Dir=PC2 Speed=")); Serial.print(cfg.feedStepUs); Serial.println(F("us"));
             stepper_enable(true);
             stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, 200, cfg.feedStepUs);
             delay(500);
@@ -370,7 +370,7 @@ static void processCommand(char* cmd) {
         }
         else if (strcmp(args, "sort") == 0) {
             Serial.println(F("Sortierer: 400 vor, 400 zurueck..."));
-            Serial.print(F("  Step=PB8 Dir=PB7 Speed=")); Serial.print(cfg.sortStepUs); Serial.println(F("us"));
+            Serial.print(F("  Step=PB7 Dir=PB8 Speed=")); Serial.print(cfg.sortStepUs); Serial.println(F("us"));
             stepper_enable(true);
             stepper_move(PIN_SORT_STEP, PIN_SORT_DIR, 400, cfg.sortStepUs);
             delay(500);
