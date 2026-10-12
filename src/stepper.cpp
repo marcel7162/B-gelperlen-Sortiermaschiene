@@ -25,7 +25,7 @@ void stepper_enable(bool on) {
 
 void stepper_move(uint32_t stepPin, uint32_t dirPin, int32_t steps, uint16_t delayUs) {
     if (steps == 0) return;
-    digitalWrite(dirPin, steps > 0 ? HIGH : LOW);
+    digitalWrite(dirPin, steps > 0 ? LOW : HIGH);
     delayMicroseconds(10);
     int32_t n = abs(steps);
     for (int32_t i = 0; i < n; i++) {
