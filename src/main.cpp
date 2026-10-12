@@ -361,7 +361,7 @@ void runCalibration() {
 // =============================================================
 //  Startup-Assistent
 // =============================================================
-static void startupWizard() {
+void startupWizard() {
     Serial.println(F("\r\n--- HARDWARE-TEST ---\r\n"));
 
     // 1) Summer

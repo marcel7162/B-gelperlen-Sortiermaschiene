@@ -51,3 +51,4 @@ bool    loadCfg();
 void    cfgDefaults();
 void    runCalibration();
 void    sortOneBead();
+void    startupWizard();

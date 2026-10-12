@@ -35,6 +35,14 @@ static void printHelp() {
         "save            Einstellungen speichern\r\n"
         "load            Einstellungen laden\r\n"
         "reset           Standardwerte laden\r\n"
+        "\r\n--- Test ---\r\n"
+        "test            Alle Hardware-Tests\r\n"
+        "test buzzer     Summer\r\n"
+        "test sensor     Farbsensor Rohwerte\r\n"
+        "test feed       Zufuehrrad vor/zurueck\r\n"
+        "test sort       Sortierer vor/zurueck\r\n"
+        "test endstop    Lichtschranke Status\r\n"
+        "test baseline   Baseline messen\r\n"
         "\r\n--- Betrieb ---\r\n"
         "run             Sortierung starten\r\n"
         "stop            Sortierung stoppen\r\n"
@@ -330,6 +338,90 @@ static void processCommand(char* cmd) {
     else if (strcmp(cmd, "sort") == 0) {
         stepper_enable(true);
         sortOneBead();
+    }
+    else if (strcmp(cmd, "test") == 0) {
+        if (!args) {
+            startupWizard();
+        }
+        else if (strcmp(args, "buzzer") == 0) {
+            Serial.println(F("Summer-Test..."));
+            beepOK(); delay(200); beepLong(); delay(200); beepError();
+            Serial.println(F("OK"));
+        }
+        else if (strcmp(args, "sensor") == 0) {
+            Serial.println(F("Farbsensor Rohwerte (5 Messungen):"));
+            for (int i = 0; i < 5; i++) {
+                RGB raw = tcs_read();
+                Serial.print(F("  R=")); Serial.print(raw.r);
+                Serial.print(F(" G=")); Serial.print(raw.g);
+                Serial.print(F(" B=")); Serial.print(raw.b);
+                Serial.print(F(" C=")); Serial.println(raw.c);
+                delay(200);
+            }
+        }
+        else if (strcmp(args, "feed") == 0) {
+            Serial.println(F("Zufuehrrad: 200 vor, 200 zurueck..."));
+            Serial.print(F("  Step=PC2 Dir=PB9 Speed=")); Serial.print(cfg.feedStepUs); Serial.println(F("us"));
+            stepper_enable(true);
+            stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, 200, cfg.feedStepUs);
+            delay(500);
+            stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, -200, cfg.feedStepUs);
+            Serial.println(F("OK"));
+        }
+        else if (strcmp(args, "sort") == 0) {
+            Serial.println(F("Sortierer: 400 vor, 400 zurueck..."));
+            Serial.print(F("  Step=PB8 Dir=PB7 Speed=")); Serial.print(cfg.sortStepUs); Serial.println(F("us"));
+            stepper_enable(true);
+            stepper_move(PIN_SORT_STEP, PIN_SORT_DIR, 400, cfg.sortStepUs);
+            delay(500);
+            stepper_move(PIN_SORT_STEP, PIN_SORT_DIR, -400, cfg.sortStepUs);
+            Serial.println(F("OK"));
+        }
+        else if (strcmp(args, "step") == 0) {
+            Serial.println(F("Einzelschritt-Test (10 Schritte, sehr langsam):"));
+            stepper_enable(true);
+            Serial.println(F("  Feed (X):"));
+            for (int i = 0; i < 10; i++) {
+                digitalWrite(PIN_FEED_DIR, HIGH);
+                digitalWrite(PIN_FEED_STEP, HIGH);
+                delay(50);
+                digitalWrite(PIN_FEED_STEP, LOW);
+                delay(50);
+                Serial.print(F("  .")); Serial.println(i);
+            }
+            Serial.println(F("  Sort (Y):"));
+            for (int i = 0; i < 10; i++) {
+                digitalWrite(PIN_SORT_DIR, HIGH);
+                digitalWrite(PIN_SORT_STEP, HIGH);
+                delay(50);
+                digitalWrite(PIN_SORT_STEP, LOW);
+                delay(50);
+                Serial.print(F("  .")); Serial.println(i);
+            }
+            Serial.println(F("OK (20 Schritte total, 100ms pro Schritt)"));
+        }
+        else if (strcmp(args, "endstop") == 0) {
+            Serial.print(F("Lichtschranke (PA4): "));
+            bool state = digitalRead(PIN_SORT_HOME) == HOME_ACTIVE_STATE;
+            Serial.println(state ? F("AUSGELOEST (Home)") : F("frei"));
+            Serial.print(F("  Rohwert: ")); Serial.println(digitalRead(PIN_SORT_HOME));
+            Serial.print(F("  Erwartet bei Home: ")); Serial.println(HOME_ACTIVE_STATE);
+        }
+        else if (strcmp(args, "baseline") == 0) {
+            measureBaseline();
+        }
+        else if (strcmp(args, "enable") == 0) {
+            Serial.print(F("Enable-Pin PC3 Zustand: "));
+            Serial.println(digitalRead(PIN_FEED_EN));
+            Serial.println(F("  0=Motoren EIN, 1=Motoren AUS"));
+            Serial.println(F("Setze Enable EIN..."));
+            stepper_enable(true);
+            Serial.print(F("Enable-Pin PC3 jetzt: "));
+            Serial.println(digitalRead(PIN_FEED_EN));
+        }
+        else {
+            Serial.println(F("test [buzzer|sensor|feed|sort|endstop|baseline|enable]"));
+        }
     }
     else if (strcmp(cmd, "rainbow") == 0) {
         cmdRainbow();

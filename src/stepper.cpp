@@ -17,11 +17,16 @@ void stepper_init() {
 void stepper_enable(bool on) {
     // Active LOW: LOW = bestromt, HIGH = stromlos
     digitalWrite(PIN_FEED_EN, on ? LOW : HIGH);
+    Serial.print(F("[stepper] Enable "));
+    Serial.print(on ? F("EIN") : F("AUS"));
+    Serial.print(F(" (PC3=")); Serial.print(on ? 0 : 1);
+    Serial.println(F(")"));
 }
 
 void stepper_move(uint32_t stepPin, uint32_t dirPin, int32_t steps, uint16_t delayUs) {
     if (steps == 0) return;
     digitalWrite(dirPin, steps > 0 ? HIGH : LOW);
+    delayMicroseconds(10);
     int32_t n = abs(steps);
     for (int32_t i = 0; i < n; i++) {
         digitalWrite(stepPin, HIGH);
