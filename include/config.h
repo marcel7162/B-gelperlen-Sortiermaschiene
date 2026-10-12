@@ -15,8 +15,11 @@
 #define PIN_SORT_DIR        PB7
 #define PIN_SORT_EN         PC3      // gemeinsamer Enable mit Motor 1
 
-// Gabellichtschranke (active LOW)
+// Gabellichtschranke
+// HOME_ACTIVE_STATE: LOW = Schlitz frei (Fahne draussen bei Home)
+//                    HIGH = Schlitz blockiert (Fahne drin bei Home)
 #define PIN_SORT_HOME       PC5      // X-Endstop-Stecker – Sortierer Home
+#define HOME_ACTIVE_STATE   HIGH     // Fahne blockiert Schlitz an Home-Position
 
 // TCS3200 Farbsensor – alles am LCD-Stecker (EXP1)
 // S0/S1 am TCS3200-Modul direkt auf VCC loeten (100 % Frequenz)
