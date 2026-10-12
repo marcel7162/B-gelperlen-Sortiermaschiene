@@ -51,7 +51,7 @@
 #define HOME_STEP_US            1000 // Schrittperiode beim Homen
 
 // Zufuehrrad – Schritte pro Perlenposition (je nach Rad-Geometrie anpassen!)
-#define FEED_STEPS_PER_BEAD     40
+#define FEED_STEPS_PER_BEAD     533  // 3200 / 6 Loecher
 
 // Schritte zwischen Sensor-Abfragen waehrend der Suche
 #define FEED_POLL_STEPS         5
