@@ -309,16 +309,33 @@ void calibrateColor(uint8_t idx) {
 
     Serial.print(F("\r\nKalibriere Farbe ")); Serial.print(idx);
     Serial.print(F(" ("));
-    Serial.print(idx < MAX_COLORS ? colorNames[idx] : "?");
+    Serial.print(colorNames[idx]);
     Serial.println(F(")"));
-    Serial.println(F("Perle auf Sensor legen, Enter druecken."));
+    Serial.println(F("Perle ins Zuefuehrrad einlegen, Enter druecken."));
     if (!waitForInput()) return;
 
+    stepper_enable(true);
+    Serial.println(F("Fahre zum Sensor..."));
+    bool found = false;
+    for (int32_t s = 0; s < STEPS_PER_REV; s += cfg.feedPollSteps) {
+        stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedPollSteps, cfg.feedStepUs);
+        if (beadDetected()) { found = true; break; }
+    }
+
+    if (!found) {
+        Serial.println(F("Keine Perle erkannt!"));
+        beepError();
+        return;
+    }
+
+    delay(200);
     readColorNorm(&cal.r[idx], &cal.g[idx], &cal.b[idx]);
 
     Serial.print(F("  R=")); Serial.print(cal.r[idx]);
     Serial.print(F(" G=")); Serial.print(cal.g[idx]);
     Serial.print(F(" B=")); Serial.println(cal.b[idx]);
+
+    stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);
 
     if (idx >= cal.numColors) cal.numColors = idx + 1;
     saveCal();
@@ -362,6 +379,7 @@ void runCalibration() {
     Serial.println(F(" Farben.\r\n"));
 
     measureBaseline();
+    stepper_enable(true);
     beepOK();
 
     for (uint8_t i = 0; i < count; i++) {
@@ -370,18 +388,36 @@ void runCalibration() {
         Serial.print(F(" ("));
         Serial.print(colorNames[i]);
         Serial.println(F(")"));
-        Serial.println(F("Perle auf Sensor legen, Enter = messen, 'q' = fertig"));
+        Serial.println(F("Perle einlegen, Enter = weiter, 'q' = fertig"));
         if (!waitForInput()) {
             Serial.println(F("Abgebrochen."));
             break;
         }
 
+        Serial.println(F("Fahre zum Sensor..."));
+        bool found = false;
+        for (int32_t s = 0; s < STEPS_PER_REV; s += cfg.feedPollSteps) {
+            stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedPollSteps, cfg.feedStepUs);
+            if (beadDetected()) { found = true; break; }
+        }
+
+        if (!found) {
+            Serial.println(F("  Keine Perle erkannt – nochmal!"));
+            beepError();
+            i--;
+            continue;
+        }
+
+        delay(200);
         readColorNorm(&cal.r[i], &cal.g[i], &cal.b[i]);
 
         Serial.print(F("  R=")); Serial.print(cal.r[i]);
         Serial.print(F(" G=")); Serial.print(cal.g[i]);
         Serial.print(F(" B=")); Serial.println(cal.b[i]);
         beepOK();
+
+        stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);
+        delay(200);
 
         cal.numColors = i + 1;
     }
