@@ -34,6 +34,7 @@ static void printHelp() {
         "\r\n--- Kalibrierung ---\r\n"
         "cal             Kalibrierung (fragt Anzahl)\r\n"
         "cal <n>         Einzelne Farbe n kalibrieren\r\n"
+        "calreset        Standard-Farben laden\r\n"
         "dump            Kalibrierdaten anzeigen\r\n"
         "save            Einstellungen speichern\r\n"
         "load            Einstellungen laden\r\n"
@@ -339,6 +340,15 @@ static void processCommand(char* cmd) {
         } else {
             runCalibration();
         }
+    }
+    else if (strcmp(cmd, "calreset") == 0) {
+        calDefaults();
+        saveCal();
+        calibrated = true;
+        Serial.print(F("Standard-Farben geladen ("));
+        Serial.print(cal.numColors);
+        Serial.println(F(" Farben)."));
+        Serial.println(F("'dump' zum Anzeigen, 'cal <n>' zum Anpassen."));
     }
     else if (strcmp(cmd, "dump") == 0) {
         cmdDump();

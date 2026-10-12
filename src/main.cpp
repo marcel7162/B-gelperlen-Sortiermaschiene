@@ -126,6 +126,44 @@ static bool inputAvailable() {
 }
 
 // =============================================================
+//  Standard-Kalibrierdaten (typische Buegelperlen-Farben)
+// =============================================================
+void calDefaults() {
+    //                      H     S     V     R    G    B
+    struct { int16_t h; uint16_t s,v,r,g,b; } def[] = {
+        {   0,  100,  950, 240, 230, 220 }, // 0  Weiss
+        {   0,  100,  100,  25,  25,  25 }, // 1  Schwarz
+        {   0,  850,  800, 200,  30,  30 }, // 2  Rot
+        { 220,  800,  700,  30,  50, 180 }, // 3  Blau
+        {  50,  900,  900, 230, 210,  30 }, // 4  Gelb
+        { 130,  750,  600,  30, 150,  40 }, // 5  Gruen
+        {  25,  900,  850, 220, 120,  20 }, // 6  Orange
+        { 330,  600,  800, 200, 100, 160 }, // 7  Pink
+        { 280,  650,  550, 120,  50, 140 }, // 8  Lila
+        {  20,  700,  400, 100,  50,  20 }, // 9  Braun
+        { 195,  500,  800, 100, 180, 210 }, // 10 Hellblau
+        { 110,  550,  750,  90, 190,  90 }, // 11 Hellgruen
+        { 235,  850,  500,  20,  30, 130 }, // 12 Dunkelblau
+        { 145,  800,  400,  20, 100,  30 }, // 13 Dunkelgruen
+        {   0,  100,  500, 128, 125, 122 }, // 14 Grau
+        {  35,  400,  800, 200, 180, 130 }, // 15 Beige
+        {   0,   50,  900, 230, 225, 220 }, // 16 Transparent
+    };
+    const uint8_t n = sizeof(def) / sizeof(def[0]);
+    cal.magic     = CAL_MAGIC;
+    cal.numColors = n;
+    cal.baseC     = 500;
+    for (uint8_t i = 0; i < n; i++) {
+        cal.h[i] = def[i].h;
+        cal.s[i] = def[i].s;
+        cal.v[i] = def[i].v;
+        cal.r[i] = def[i].r;
+        cal.g[i] = def[i].g;
+        cal.b[i] = def[i].b;
+    }
+}
+
+// =============================================================
 //  EEPROM – Kalibrierdaten
 // =============================================================
 void saveCal() {
@@ -579,21 +617,21 @@ void setup() {
     tcs_init();
 
     cfgDefaults();
-    calibrated = loadCal();
+    bool fromEeprom = loadCal();
+    if (!fromEeprom) calDefaults();
+    calibrated = true;
     loadCfg();
 
     // Hardware-Test beim Start
     startupWizard();
     saveCal();
 
-    if (calibrated) {
-        Serial.println(F("Kalibrierdaten aus EEPROM geladen."));
-        Serial.println(F("'run' = Sortierung starten"));
-        Serial.println(F("'cal' = neu kalibrieren"));
-    } else {
-        Serial.println(F("Keine Kalibrierdaten vorhanden."));
-        Serial.println(F("'cal' = Kalibrierung starten"));
-    }
+    Serial.print(fromEeprom ? F("Kalibrierdaten aus EEPROM") : F("Standard-Farben"));
+    Serial.print(F(" geladen ("));
+    Serial.print(cal.numColors);
+    Serial.println(F(" Farben)."));
+    Serial.println(F("'run' = Sortierung starten"));
+    Serial.println(F("'cal' = Farben anpassen"));
 
     Serial.println(F("'help' = alle Befehle\r\n"));
     shell_init();

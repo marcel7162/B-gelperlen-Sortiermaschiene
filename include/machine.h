@@ -49,6 +49,7 @@ uint8_t classifyColor();
 void    moveToBin(uint8_t bin);
 bool    homeSorter();
 void    measureBaseline();
+void    calDefaults();
 void    saveCal();
 bool    loadCal();
 void    saveCfg();
