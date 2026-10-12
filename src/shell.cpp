@@ -156,8 +156,8 @@ static void cmdDump() {
     Serial.print(F("Magic:    0x")); Serial.println(cal.magic, HEX);
     Serial.print(F("Baseline: ")); Serial.println(cal.baseC);
     Serial.print(F("Farben:   ")); Serial.println(cal.numColors);
-    Serial.println(F("\r\nFach  Farbe          R     G     B"));
-    Serial.println(F("----  -------------- ----- ----- -----"));
+    Serial.println(F("\r\nFach  Farbe           R    G    B    H    S    V"));
+    Serial.println(F("----  -------------- ---- ---- ---- ---- ---- ----"));
     uint8_t n = cal.numColors > 0 ? cal.numColors : MAX_COLORS;
     for (uint8_t i = 0; i < n; i++) {
         if (i < 10) Serial.print(' ');
@@ -166,21 +166,29 @@ static void cmdDump() {
         Serial.print(colorNames[i]);
         uint8_t pad = 15 - strlen(colorNames[i]);
         while (pad--) Serial.print(' ');
-        Serial.print(cal.r[i]); Serial.print(F("   "));
-        Serial.print(cal.g[i]); Serial.print(F("   "));
-        Serial.println(cal.b[i]);
+        Serial.print(cal.r[i]); Serial.print(F("  "));
+        Serial.print(cal.g[i]); Serial.print(F("  "));
+        Serial.print(cal.b[i]); Serial.print(F("  "));
+        Serial.print(cal.h[i]); Serial.print(F("  "));
+        Serial.print(cal.s[i]); Serial.print(F("  "));
+        Serial.println(cal.v[i]);
     }
 }
 
 // ---------------------------------------------------------------
 static void cmdColor() {
-    uint16_t nr, ng, nb;
-    readColorNorm(&nr, &ng, &nb);
-    uint8_t bin = classifyColor();
+    int16_t  hue;
+    uint16_t sat, val, r8, g8, b8;
+    readColorHSV(&hue, &sat, &val, &r8, &g8, &b8);
 
-    Serial.print(F("Norm: R=")); Serial.print(nr);
-    Serial.print(F(" G=")); Serial.print(ng);
-    Serial.print(F(" B=")); Serial.println(nb);
+    Serial.print(F("RGB: ")); Serial.print(r8);
+    Serial.print(F(",")); Serial.print(g8);
+    Serial.print(F(",")); Serial.println(b8);
+    Serial.print(F("HSV: H=")); Serial.print(hue);
+    Serial.print(F(" S=")); Serial.print(sat);
+    Serial.print(F(" V=")); Serial.println(val);
+
+    uint8_t bin = classifyColor();
     Serial.print(F("Farbe: ")); Serial.print(bin < MAX_COLORS ? colorNames[bin] : "Unbekannt");
     Serial.print(F(" (Fach ")); Serial.print(bin);
     Serial.println(F(")"));
@@ -189,38 +197,43 @@ static void cmdColor() {
 // ---------------------------------------------------------------
 static void cmdRaw() {
     RGB raw = tcs_read();
-    Serial.print(F("Roh:  R=")); Serial.print(raw.r);
+    Serial.print(F("Pulsdauer: R=")); Serial.print(raw.r);
     Serial.print(F(" G=")); Serial.print(raw.g);
     Serial.print(F(" B=")); Serial.print(raw.b);
     Serial.print(F(" C=")); Serial.println(raw.c);
 
-    if (raw.c >= MIN_CLEAR_READING) {
-        Serial.print(F("Norm: R=")); Serial.print((uint32_t)raw.r * 1000 / raw.c);
-        Serial.print(F(" G=")); Serial.print((uint32_t)raw.g * 1000 / raw.c);
-        Serial.print(F(" B=")); Serial.print((uint32_t)raw.b * 1000 / raw.c);
-        Serial.print(F("  (R%=")); Serial.print((uint32_t)raw.r * 100 / (raw.r + raw.g + raw.b));
-        Serial.print(F(" G%=")); Serial.print((uint32_t)raw.g * 100 / (raw.r + raw.g + raw.b));
-        Serial.print(F(" B%=")); Serial.print((uint32_t)raw.b * 100 / (raw.r + raw.g + raw.b));
-        Serial.println(F(")"));
+    if (raw.r > 0 || raw.g > 0 || raw.b > 0) {
+        uint16_t r8 = constrain(map(raw.r, 2000, 100, 0, 255), 0, 255);
+        uint16_t g8 = constrain(map(raw.g, 2000, 100, 0, 255), 0, 255);
+        uint16_t b8 = constrain(map(raw.b, 2000, 100, 0, 255), 0, 255);
+        Serial.print(F("RGB:       ")); Serial.print(r8);
+        Serial.print(F(",")); Serial.print(g8);
+        Serial.print(F(",")); Serial.println(b8);
+
+        int16_t hue; uint16_t sat, val;
+        readColorHSV(&hue, &sat, &val, &r8, &g8, &b8);
+        Serial.print(F("HSV:       H=")); Serial.print(hue);
+        Serial.print(F(" S=")); Serial.print(sat);
+        Serial.print(F(" V=")); Serial.println(val);
     }
 }
 
 // ---------------------------------------------------------------
 static void cmdScan() {
     Serial.println(F("Dauermessung – Enter zum Stoppen"));
+    Serial.println(F("Puls R,G,B,C | RGB | H S V"));
     while (!Serial.available()) {
-        RGB raw = tcs_read();
-        uint16_t nr, ng, nb;
-        readColorNorm(&nr, &ng, &nb);
+        int16_t  hue;
+        uint16_t sat, val, r8, g8, b8;
+        readColorHSV(&hue, &sat, &val, &r8, &g8, &b8);
 
-        Serial.print(F("R=")); Serial.print(raw.r);
-        Serial.print(F(" G=")); Serial.print(raw.g);
-        Serial.print(F(" B=")); Serial.print(raw.b);
-        Serial.print(F(" C=")); Serial.print(raw.c);
-        Serial.print(F("  | nR=")); Serial.print(nr);
-        Serial.print(F(" nG=")); Serial.print(ng);
-        Serial.print(F(" nB=")); Serial.println(nb);
-        delay(300);
+        Serial.print(r8); Serial.print(F(","));
+        Serial.print(g8); Serial.print(F(","));
+        Serial.print(b8);
+        Serial.print(F("  H=")); Serial.print(hue);
+        Serial.print(F(" S=")); Serial.print(sat);
+        Serial.print(F(" V=")); Serial.println(val);
+        delay(500);
     }
     while (Serial.available()) Serial.read();
     Serial.println(F("Gestoppt."));

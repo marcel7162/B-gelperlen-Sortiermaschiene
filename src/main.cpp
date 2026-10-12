@@ -157,11 +157,37 @@ bool beadDetected() {
 }
 
 // =============================================================
-//  Farblesung
+//  Farblesung – Pulsdauer zu RGB zu HSV
 // =============================================================
-void readColorNorm(uint16_t* nr, uint16_t* ng, uint16_t* nb) {
-    uint32_t sumR = 0, sumG = 0, sumB = 0;
-    uint8_t  valid = 0;
+static void rgbToHsv(uint16_t r8, uint16_t g8, uint16_t b8,
+                     int16_t* hue, uint16_t* sat, uint16_t* val) {
+    int16_t maxC = r8; if (g8 > maxC) maxC = g8; if (b8 > maxC) maxC = b8;
+    int16_t minC = r8; if (g8 < minC) minC = g8; if (b8 < minC) minC = b8;
+    int16_t delta = maxC - minC;
+
+    *val = (uint16_t)((int32_t)maxC * 1000 / 255);
+
+    if (maxC == 0) { *sat = 0; *hue = 0; return; }
+    *sat = (uint16_t)((int32_t)delta * 1000 / maxC);
+
+    if (delta == 0) { *hue = 0; return; }
+
+    int32_t h;
+    if (maxC == (int16_t)r8)
+        h = 60L * ((int32_t)g8 - b8) / delta;
+    else if (maxC == (int16_t)g8)
+        h = 120L + 60L * ((int32_t)b8 - r8) / delta;
+    else
+        h = 240L + 60L * ((int32_t)r8 - g8) / delta;
+
+    if (h < 0) h += 360;
+    *hue = (int16_t)h;
+}
+
+void readColorHSV(int16_t* hue, uint16_t* sat, uint16_t* val,
+                  uint16_t* outR, uint16_t* outG, uint16_t* outB) {
+    int32_t sumR = 0, sumG = 0, sumB = 0;
+    uint8_t valid = 0;
 
     for (int s = 0; s < cfg.colorReadSamples; s++) {
         RGB raw = tcs_read();
@@ -171,41 +197,74 @@ void readColorNorm(uint16_t* nr, uint16_t* ng, uint16_t* nb) {
             Serial.print(F(" B=")); Serial.print(raw.b);
             Serial.print(F(" C=")); Serial.println(raw.c);
         }
-        if (raw.c < MIN_CLEAR_READING) continue;
-        sumR += (uint32_t)raw.r * 1000 / raw.c;
-        sumG += (uint32_t)raw.g * 1000 / raw.c;
-        sumB += (uint32_t)raw.b * 1000 / raw.c;
+        if (raw.r == 0 && raw.g == 0 && raw.b == 0) continue;
+        sumR += raw.r;
+        sumG += raw.g;
+        sumB += raw.b;
         valid++;
     }
 
     if (valid == 0) {
-        *nr = *ng = *nb = 0;
+        *hue = 0; *sat = 0; *val = 0;
+        *outR = 0; *outG = 0; *outB = 0;
         return;
     }
-    *nr = sumR / valid;
-    *ng = sumG / valid;
-    *nb = sumB / valid;
+
+    uint16_t avgR = sumR / valid;
+    uint16_t avgG = sumG / valid;
+    uint16_t avgB = sumB / valid;
+
+    // Pulsdauer zu RGB mappen (kleiner Wert = mehr Licht = hoehere RGB)
+    // Bereich anpassen: typisch ~100 (Weiss/hell) bis ~2000 (Schwarz/dunkel)
+    uint16_t r8 = constrain(map(avgR, 2000, 100, 0, 255), 0, 255);
+    uint16_t g8 = constrain(map(avgG, 2000, 100, 0, 255), 0, 255);
+    uint16_t b8 = constrain(map(avgB, 2000, 100, 0, 255), 0, 255);
+
+    *outR = r8;
+    *outG = g8;
+    *outB = b8;
+
+    rgbToHsv(r8, g8, b8, hue, sat, val);
+
+    if (debugMode) {
+        Serial.print(F("  [hsv] R=")); Serial.print(r8);
+        Serial.print(F(" G=")); Serial.print(g8);
+        Serial.print(F(" B=")); Serial.print(b8);
+        Serial.print(F(" H=")); Serial.print(*hue);
+        Serial.print(F(" S=")); Serial.print(*sat);
+        Serial.print(F(" V=")); Serial.println(*val);
+    }
 }
 
 // =============================================================
-//  Farbklassifikation
+//  Farbklassifikation – HSV-Distanz
 // =============================================================
 uint8_t classifyColor() {
-    uint16_t nr, ng, nb;
-    readColorNorm(&nr, &ng, &nb);
+    int16_t  hue;
+    uint16_t sat, val, r8, g8, b8;
+    readColorHSV(&hue, &sat, &val, &r8, &g8, &b8);
 
-    if (nr == 0 && ng == 0 && nb == 0) return cal.numColors;
+    if (r8 == 0 && g8 == 0 && b8 == 0) return cal.numColors;
 
     uint32_t minDist = UINT32_MAX;
     uint8_t  bestBin = cal.numColors;
 
     for (uint8_t i = 0; i < cal.numColors; i++) {
-        int32_t dr = (int32_t)nr - cal.r[i];
-        int32_t dg = (int32_t)ng - cal.g[i];
-        int32_t db = (int32_t)nb - cal.b[i];
-        uint32_t dist = (uint32_t)(dr * dr + dg * dg + db * db);
+        // Hue-Distanz mit Wraparound (0-360)
+        int32_t dh = (int32_t)hue - cal.h[i];
+        if (dh > 180) dh -= 360;
+        if (dh < -180) dh += 360;
+        int32_t ds = (int32_t)sat - cal.s[i];
+        int32_t dv = (int32_t)val - cal.v[i];
+
+        // Gewichtung: Hue x4, Sat x2, Val x1
+        uint32_t dist = (uint32_t)(dh * dh * 4 + ds * ds * 2 + dv * dv);
+
         if (debugMode) {
             Serial.print(F("  [cls] ")); Serial.print(colorNames[i]);
+            Serial.print(F(" dH=")); Serial.print(dh);
+            Serial.print(F(" dS=")); Serial.print(ds);
+            Serial.print(F(" dV=")); Serial.print(dv);
             Serial.print(F(" d=")); Serial.println(dist);
         }
         if (dist < minDist) {
@@ -215,9 +274,9 @@ uint8_t classifyColor() {
     }
 
     if (debugMode) {
-        Serial.print(F("  [cls] nR=")); Serial.print(nr);
-        Serial.print(F(" nG=")); Serial.print(ng);
-        Serial.print(F(" nB=")); Serial.print(nb);
+        Serial.print(F("  [cls] H=")); Serial.print(hue);
+        Serial.print(F(" S=")); Serial.print(sat);
+        Serial.print(F(" V=")); Serial.print(val);
         Serial.print(F(" -> "));
         Serial.print(bestBin < MAX_COLORS ? colorNames[bestBin] : "Unbekannt");
         Serial.print(F(" dist=")); Serial.println(minDist);
@@ -332,11 +391,15 @@ void calibrateColor(uint8_t idx) {
     }
 
     delay(200);
-    readColorNorm(&cal.r[idx], &cal.g[idx], &cal.b[idx]);
+    readColorHSV(&cal.h[idx], &cal.s[idx], &cal.v[idx],
+                 &cal.r[idx], &cal.g[idx], &cal.b[idx]);
 
-    Serial.print(F("  R=")); Serial.print(cal.r[idx]);
-    Serial.print(F(" G=")); Serial.print(cal.g[idx]);
-    Serial.print(F(" B=")); Serial.println(cal.b[idx]);
+    Serial.print(F("  RGB=")); Serial.print(cal.r[idx]);
+    Serial.print(F(",")); Serial.print(cal.g[idx]);
+    Serial.print(F(",")); Serial.print(cal.b[idx]);
+    Serial.print(F("  H=")); Serial.print(cal.h[idx]);
+    Serial.print(F(" S=")); Serial.print(cal.s[idx]);
+    Serial.print(F(" V=")); Serial.println(cal.v[idx]);
 
     stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);
 
@@ -412,11 +475,15 @@ void runCalibration() {
         }
 
         delay(200);
-        readColorNorm(&cal.r[i], &cal.g[i], &cal.b[i]);
+        readColorHSV(&cal.h[i], &cal.s[i], &cal.v[i],
+                     &cal.r[i], &cal.g[i], &cal.b[i]);
 
-        Serial.print(F("  R=")); Serial.print(cal.r[i]);
-        Serial.print(F(" G=")); Serial.print(cal.g[i]);
-        Serial.print(F(" B=")); Serial.println(cal.b[i]);
+        Serial.print(F("  RGB=")); Serial.print(cal.r[i]);
+        Serial.print(F(",")); Serial.print(cal.g[i]);
+        Serial.print(F(",")); Serial.print(cal.b[i]);
+        Serial.print(F("  H=")); Serial.print(cal.h[i]);
+        Serial.print(F(" S=")); Serial.print(cal.s[i]);
+        Serial.print(F(" V=")); Serial.println(cal.v[i]);
         beepOK();
 
         stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);

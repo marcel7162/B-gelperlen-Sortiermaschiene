@@ -16,16 +16,16 @@ void tcs_init() {
 }
 
 // S2/S3 Belegung:  Red=LL  Blue=LH  Clear=HL  Green=HH
-static uint32_t _readChannel(bool s2, bool s3, uint16_t ms) {
+// Gibt Pulsdauer in Mikrosekunden zurueck (kleiner = mehr Licht)
+static uint16_t _readChannel(bool s2, bool s3) {
     digitalWrite(PIN_TCS_S2, s2);
     digitalWrite(PIN_TCS_S3, s3);
-    delayMicroseconds(TCS_SETTLE_US);
+    delay(20);
 
     uint32_t sum = 0;
     uint8_t  valid = 0;
-    uint8_t  samples = (ms < 20) ? 4 : 10;
 
-    for (uint8_t i = 0; i < samples; i++) {
+    for (uint8_t i = 0; i < 8; i++) {
         uint32_t pw = pulseIn(PIN_TCS_OUT, LOW, 100000UL);
         if (pw == 0) continue;
         sum += pw;
@@ -33,24 +33,27 @@ static uint32_t _readChannel(bool s2, bool s3, uint16_t ms) {
     }
 
     if (valid == 0) return 0;
-    uint32_t avgPeriod = sum / valid;
-    if (avgPeriod == 0) return 0;
-    return 1000000UL / avgPeriod;
+    return (uint16_t)(sum / valid);
 }
 
 RGB tcs_read() {
     RGB out;
-    out.r = _readChannel(false, false, TCS_SAMPLE_MS);
-    out.b = _readChannel(false, true,  TCS_SAMPLE_MS);
-    out.c = _readChannel(true,  false, TCS_SAMPLE_MS);
-    out.g = _readChannel(true,  true,  TCS_SAMPLE_MS);
+    out.r = _readChannel(false, false);
+    out.b = _readChannel(false, true);
+    out.c = _readChannel(true,  false);
+    out.g = _readChannel(true,  true);
     return out;
 }
 
 uint16_t tcs_read_clear() {
-    return _readChannel(true, false, TCS_SAMPLE_MS);
+    return _readChannel(true, false);
 }
 
 uint16_t tcs_read_clear_fast() {
-    return _readChannel(true, false, TCS_FAST_MS);
+    // Schnellmessung mit weniger Samples
+    digitalWrite(PIN_TCS_S2, HIGH);
+    digitalWrite(PIN_TCS_S3, LOW);
+    delay(10);
+    uint32_t pw = pulseIn(PIN_TCS_OUT, LOW, 100000UL);
+    return (uint16_t)pw;
 }

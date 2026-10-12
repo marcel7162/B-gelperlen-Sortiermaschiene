@@ -65,14 +65,14 @@
 #define BEAD_THRESHOLD          40   // Min. Clear-Differenz fuer Perlenerkennung
 #define MIN_CLEAR_READING       10   // Unter diesem Wert keine Klassifikation
 #define COLOR_READ_SAMPLES      5    // Messwerte zum Mitteln
-#define MAX_COLOR_DISTANCE      8000 // Max. Distanz fuer Farbzuordnung
+#define MAX_COLOR_DISTANCE      50000 // Max. HSV-Distanz fuer Farbzuordnung
 
 #define MAX_COLORS              NUM_BINS
 
 // =============================================================
 //  Kalibrierung – EEPROM
 // =============================================================
-#define CAL_MAGIC               0xBEA2
+#define CAL_MAGIC               0xBEA3
 
 // Periodisches Re-Homing alle N Perlen
 #define REHOME_INTERVAL         50

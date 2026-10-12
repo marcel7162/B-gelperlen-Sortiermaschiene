@@ -5,7 +5,10 @@ struct CalData {
     uint16_t magic;
     uint16_t baseC;
     uint8_t  numColors;
-    uint16_t r[MAX_COLORS];
+    int16_t  h[MAX_COLORS];    // Hue 0-360 (oder negativ)
+    uint16_t s[MAX_COLORS];    // Saturation 0-1000
+    uint16_t v[MAX_COLORS];    // Value 0-1000
+    uint16_t r[MAX_COLORS];    // RGB zur Anzeige (map 0-255)
     uint16_t g[MAX_COLORS];
     uint16_t b[MAX_COLORS];
 };
@@ -40,7 +43,8 @@ void    beepOK();
 void    beepLong();
 void    beepError();
 bool    beadDetected();
-void    readColorNorm(uint16_t* nr, uint16_t* ng, uint16_t* nb);
+void    readColorHSV(int16_t* hue, uint16_t* sat, uint16_t* val,
+                     uint16_t* outR, uint16_t* outG, uint16_t* outB);
 uint8_t classifyColor();
 void    moveToBin(uint8_t bin);
 bool    homeSorter();
