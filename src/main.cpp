@@ -287,9 +287,6 @@ void sortOneBead() {
     moveToBin(bin);
     delay(50);
 
-    stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);
-    delay(200);
-
     beadCount++;
     beepOK();
 
