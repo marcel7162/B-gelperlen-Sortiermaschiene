@@ -411,22 +411,12 @@ void calibrateColor(uint8_t idx) {
     Serial.print(F(" ("));
     Serial.print(colorNames[idx]);
     Serial.println(F(")"));
-    Serial.println(F("Perle ins Zuefuehrrad einlegen, Enter druecken."));
+    Serial.println(F("Perle einlegen, Enter druecken."));
     if (!waitForInput()) return;
 
     stepper_enable(true);
     Serial.println(F("Fahre zum Sensor..."));
-    bool found = false;
-    for (int32_t s = 0; s < STEPS_PER_REV; s += cfg.feedPollSteps) {
-        stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedPollSteps, cfg.feedStepUs);
-        if (beadDetected()) { found = true; break; }
-    }
-
-    if (!found) {
-        Serial.println(F("Keine Perle erkannt!"));
-        beepError();
-        return;
-    }
+    stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);
 
     delay(200);
     readColorHSV(&cal.h[idx], &cal.s[idx], &cal.v[idx],
@@ -438,8 +428,6 @@ void calibrateColor(uint8_t idx) {
     Serial.print(F("  H=")); Serial.print(cal.h[idx]);
     Serial.print(F(" S=")); Serial.print(cal.s[idx]);
     Serial.print(F(" V=")); Serial.println(cal.v[idx]);
-
-    stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);
 
     if (idx >= cal.numColors) cal.numColors = idx + 1;
     saveCal();
@@ -499,18 +487,7 @@ void runCalibration() {
         }
 
         Serial.println(F("Fahre zum Sensor..."));
-        bool found = false;
-        for (int32_t s = 0; s < STEPS_PER_REV; s += cfg.feedPollSteps) {
-            stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedPollSteps, cfg.feedStepUs);
-            if (beadDetected()) { found = true; break; }
-        }
-
-        if (!found) {
-            Serial.println(F("  Keine Perle erkannt – nochmal!"));
-            beepError();
-            i--;
-            continue;
-        }
+        stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);
 
         delay(200);
         readColorHSV(&cal.h[i], &cal.s[i], &cal.v[i],
@@ -523,9 +500,6 @@ void runCalibration() {
         Serial.print(F(" S=")); Serial.print(cal.s[i]);
         Serial.print(F(" V=")); Serial.println(cal.v[i]);
         beepOK();
-
-        stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);
-        delay(200);
 
         cal.numColors = i + 1;
     }
