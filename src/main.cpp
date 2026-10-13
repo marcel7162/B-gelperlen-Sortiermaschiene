@@ -365,19 +365,10 @@ void measureBaseline() {
 //  Eine Perle sortieren
 // =============================================================
 void sortOneBead() {
-    Serial.println(F("Suche Perle..."));
     stepper_enable(true);
 
-    bool found = false;
-    for (int32_t s = 0; s < STEPS_PER_REV; s += cfg.feedPollSteps) {
-        stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedPollSteps, cfg.feedStepUs);
-        if (beadDetected()) { found = true; break; }
-    }
-
-    if (!found) {
-        Serial.println(F("Keine Perle gefunden."));
-        return;
-    }
+    stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);
+    delay(200);
 
     uint8_t bin = classifyColor();
 
@@ -628,30 +619,7 @@ void loop() {
     }
 
     // --- Sortierbetrieb ---
-    stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedPollSteps, cfg.feedStepUs);
-
-    if (beadDetected()) {
-        uint8_t bin = classifyColor();
-
-        Serial.print(F("\r\nPerle #")); Serial.print(beadCount);
-        Serial.print(F(" -> "));
-        Serial.print(bin < MAX_COLORS ? colorNames[bin] : "Unbekannt");
-        Serial.print(F(" (Fach ")); Serial.print(bin);
-        Serial.println(F(")"));
-
-        moveToBin(bin);
-        delay(50);
-
-        stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);
-        delay(200);
-
-        beadCount++;
-        beepOK();
-
-        if (cfg.rehomeInterval > 0 && beadCount % cfg.rehomeInterval == 0) {
-            homeSorter();
-        }
-    }
+    sortOneBead();
 
     if (buttonDown()) {
         delay(50);
