@@ -25,9 +25,11 @@ struct RuntimeCfg {
     uint8_t  colorReadSamples;
     uint16_t tcsSampleMs;
     uint16_t maxColorDist;
+    uint16_t pulseDark;
+    uint16_t pulseLight;
 };
 
-#define CFG_MAGIC 0xCF60
+#define CFG_MAGIC 0xCF61
 
 extern CalData     cal;
 extern RuntimeCfg  cfg;

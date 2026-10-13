@@ -40,6 +40,8 @@ void cfgDefaults() {
     cfg.colorReadSamples = COLOR_READ_SAMPLES;
     cfg.tcsSampleMs      = TCS_SAMPLE_MS;
     cfg.maxColorDist     = MAX_COLOR_DISTANCE;
+    cfg.pulseDark        = 80;
+    cfg.pulseLight       = 5;
 }
 
 void saveCfg() {
@@ -252,11 +254,9 @@ void readColorHSV(int16_t* hue, uint16_t* sat, uint16_t* val,
     uint16_t avgG = sumG / valid;
     uint16_t avgB = sumB / valid;
 
-    // Pulsdauer zu RGB mappen (kleiner Wert = mehr Licht = hoehere RGB)
-    // Bereich anpassen: typisch ~100 (Weiss/hell) bis ~2000 (Schwarz/dunkel)
-    uint16_t r8 = constrain(map(avgR, 2000, 100, 0, 255), 0, 255);
-    uint16_t g8 = constrain(map(avgG, 2000, 100, 0, 255), 0, 255);
-    uint16_t b8 = constrain(map(avgB, 2000, 100, 0, 255), 0, 255);
+    uint16_t r8 = constrain(map(avgR, cfg.pulseDark, cfg.pulseLight, 0, 255), 0, 255);
+    uint16_t g8 = constrain(map(avgG, cfg.pulseDark, cfg.pulseLight, 0, 255), 0, 255);
+    uint16_t b8 = constrain(map(avgB, cfg.pulseDark, cfg.pulseLight, 0, 255), 0, 255);
 
     *outR = r8;
     *outG = g8;

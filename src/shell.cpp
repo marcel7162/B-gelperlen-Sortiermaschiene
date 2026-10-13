@@ -59,7 +59,7 @@ static void printHelp() {
         "set <p> <w>     Parameter setzen\r\n"
         "  threshold feedsteps pollsteps rehome\r\n"
         "  sortspeed feedspeed homespeed samples\r\n"
-        "  samplems maxdist"
+        "  samplems maxdist pulsedark pulselight"
     ));
 }
 
@@ -122,6 +122,10 @@ static void printGet() {
     Serial.print(F("samplems    = ")); Serial.print(cfg.tcsSampleMs);
     Serial.println(F(" ms"));
     Serial.print(F("maxdist     = ")); Serial.println(cfg.maxColorDist);
+    Serial.print(F("pulsedark   = ")); Serial.print(cfg.pulseDark);
+    Serial.println(F(" us (kein Licht)"));
+    Serial.print(F("pulselight  = ")); Serial.print(cfg.pulseLight);
+    Serial.println(F(" us (max Licht)"));
 }
 
 // ---------------------------------------------------------------
@@ -144,6 +148,8 @@ static void cmdSet(char* args) {
     else if (strcmp(param, "samples") == 0)    cfg.colorReadSamples = val;
     else if (strcmp(param, "samplems") == 0)   cfg.tcsSampleMs      = val;
     else if (strcmp(param, "maxdist") == 0)    cfg.maxColorDist     = val;
+    else if (strcmp(param, "pulsedark") == 0)  cfg.pulseDark       = val;
+    else if (strcmp(param, "pulselight") == 0) cfg.pulseLight      = val;
     else {
         Serial.print(F("Unbekannt: ")); Serial.println(param);
         return;
@@ -204,9 +210,9 @@ static void cmdRaw() {
     Serial.print(F(" C=")); Serial.println(raw.c);
 
     if (raw.r > 0 || raw.g > 0 || raw.b > 0) {
-        uint16_t r8 = constrain(map(raw.r, 2000, 100, 0, 255), 0, 255);
-        uint16_t g8 = constrain(map(raw.g, 2000, 100, 0, 255), 0, 255);
-        uint16_t b8 = constrain(map(raw.b, 2000, 100, 0, 255), 0, 255);
+        uint16_t r8 = constrain(map(raw.r, cfg.pulseDark, cfg.pulseLight, 0, 255), 0, 255);
+        uint16_t g8 = constrain(map(raw.g, cfg.pulseDark, cfg.pulseLight, 0, 255), 0, 255);
+        uint16_t b8 = constrain(map(raw.b, cfg.pulseDark, cfg.pulseLight, 0, 255), 0, 255);
         Serial.print(F("RGB:       ")); Serial.print(r8);
         Serial.print(F(",")); Serial.print(g8);
         Serial.print(F(",")); Serial.println(b8);
