@@ -24,6 +24,7 @@ bool        sorting    = false;
 bool        debugMode  = false;
 int32_t     sortPos    = 0;
 uint32_t    beadCount  = 0;
+static int32_t feedPos = 0;
 
 // =============================================================
 //  RuntimeCfg – Standardwerte / EEPROM
@@ -362,12 +363,24 @@ void measureBaseline() {
 }
 
 // =============================================================
+//  Feeder exakt ein Fach weiterdrehen (ohne Rundungsdrift)
+// =============================================================
+static void feedAdvance() {
+    int32_t target = (int32_t)((uint32_t)(feedPos + 1) * STEPS_PER_REV / 6);
+    int32_t current = (int32_t)((uint32_t)feedPos * STEPS_PER_REV / 6);
+    int32_t steps = target - current;
+    stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, steps, cfg.feedStepUs);
+    feedPos++;
+    if (feedPos >= 6) feedPos = 0;
+}
+
+// =============================================================
 //  Eine Perle sortieren
 // =============================================================
 void sortOneBead() {
     stepper_enable(true);
 
-    stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);
+    feedAdvance();
     delay(200);
 
     uint8_t bin = classifyColor();
@@ -407,7 +420,7 @@ void calibrateColor(uint8_t idx) {
 
     stepper_enable(true);
     Serial.println(F("Fahre zum Sensor..."));
-    stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);
+    feedAdvance();
 
     delay(200);
     readColorHSV(&cal.h[idx], &cal.s[idx], &cal.v[idx],
@@ -478,7 +491,7 @@ void runCalibration() {
         }
 
         Serial.println(F("Fahre zum Sensor..."));
-        stepper_move(PIN_FEED_STEP, PIN_FEED_DIR, cfg.feedStepsPerBead, cfg.feedStepUs);
+        feedAdvance();
 
         delay(200);
         readColorHSV(&cal.h[i], &cal.s[i], &cal.v[i],
