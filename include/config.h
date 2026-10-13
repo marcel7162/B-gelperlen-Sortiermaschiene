@@ -62,7 +62,7 @@
 #define TCS_SAMPLE_MS           100  // Messzeit pro Kanal (Farblesung)
 #define TCS_FAST_MS             10   // Schnellmessung (Perlenerkennung)
 #define TCS_SETTLE_US           500  // Einschwingzeit nach Kanalwechsel
-#define BEAD_THRESHOLD          40   // Min. Clear-Differenz fuer Perlenerkennung
+#define BEAD_THRESHOLD          3    // Min. Clear-Differenz fuer Perlenerkennung
 #define MIN_CLEAR_READING       10   // Unter diesem Wert keine Klassifikation
 #define COLOR_READ_SAMPLES      5    // Messwerte zum Mitteln
 #define MAX_COLOR_DISTANCE      50000 // Max. HSV-Distanz fuer Farbzuordnung
