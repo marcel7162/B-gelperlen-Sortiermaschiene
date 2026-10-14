@@ -21,21 +21,21 @@
 #define PIN_SORT_HOME       PA4      // Gabellichtschranke Sortierer Home
 #define HOME_ACTIVE_STATE   HIGH     // Fahne blockiert Schlitz an Home-Position
 
-// TCS3200 Farbsensor – LCD-Stecker (EXP1)
-// S0/S1 am TCS3200-Modul direkt auf VCC loeten (100 % Frequenz)
-// TCS3200 VCC → LCD 5V,  GND → LCD GND
-#define PIN_TCS_S2          PB12     // LCD-Stecker
-#define PIN_TCS_S3          PB15     // LCD-Stecker
-#define PIN_TCS_OUT         PB13     // LCD-Stecker (5V-tolerant, EXTI-faehig)
+// AS7341 Spektralsensor – I2C2 (ehemals Taster/Summer Pins)
+// AS7341 VCC → 3.3V,  GND → GND
+#define PIN_I2C_SCL         PB10     // I2C2 SCL
+#define PIN_I2C_SDA         PB11     // I2C2 SDA
 
-// Taster – LCD-Stecker (interner Pullup per Software)
-#define PIN_BUTTON          PB10     // LCD-Stecker
+// Taster – LCD-Stecker (ehemals TCS3200 S2, interner Pullup per Software)
+#define PIN_BUTTON          PB12     // LCD-Stecker
 
-// Summer – LCD-Stecker
-#define PIN_BUZZER          PB11     // LCD-Stecker
+// Summer – LCD-Stecker (ehemals TCS3200 OUT)
+#define PIN_BUZZER          PB13     // LCD-Stecker
 
 // Unbenutzte Treiber abschalten
 #define PIN_ZE_EN           PA15     // Enable Z+E Treiber (nicht benutzt)
+
+// PB15 frei (ehemals TCS3200 S3)
 
 // =============================================================
 //  Stepper-Konfiguration
@@ -57,14 +57,10 @@
 #define FEED_POLL_STEPS         5
 
 // =============================================================
-//  Farbsensor-Konfiguration
+//  Farbsensor-Konfiguration (AS7341)
 // =============================================================
-#define TCS_SAMPLE_MS           100  // Messzeit pro Kanal (Farblesung)
-#define TCS_FAST_MS             10   // Schnellmessung (Perlenerkennung)
-#define TCS_SETTLE_US           500  // Einschwingzeit nach Kanalwechsel
-#define BEAD_THRESHOLD          3    // Min. Clear-Differenz fuer Perlenerkennung
-#define MIN_CLEAR_READING       10   // Unter diesem Wert keine Klassifikation
-#define COLOR_READ_SAMPLES      5    // Messwerte zum Mitteln
+#define AS7341_ADDR             0x39 // I2C-Adresse
+#define COLOR_READ_SAMPLES      3    // Messwerte zum Mitteln
 #define MAX_COLOR_DISTANCE      50000 // Max. HSV-Distanz fuer Farbzuordnung
 
 #define MAX_COLORS              NUM_BINS
@@ -72,7 +68,7 @@
 // =============================================================
 //  Kalibrierung – EEPROM
 // =============================================================
-#define CAL_MAGIC               0xBEA3
+#define CAL_MAGIC               0xBEA4
 
 // Periodisches Re-Homing alle N Perlen
 #define REHOME_INTERVAL         50

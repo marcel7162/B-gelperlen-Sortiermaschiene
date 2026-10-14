@@ -59,7 +59,7 @@ static void printHelp() {
         "set <p> <w>     Parameter setzen\r\n"
         "  threshold feedsteps pollsteps rehome\r\n"
         "  sortspeed feedspeed homespeed samples\r\n"
-        "  samplems maxdist pulsedark pulselight"
+        "  maxdist"
     ));
 }
 
@@ -119,13 +119,7 @@ static void printGet() {
     Serial.print(F("homespeed   = ")); Serial.print(cfg.homeStepUs);
     Serial.println(F(" us"));
     Serial.print(F("samples     = ")); Serial.println(cfg.colorReadSamples);
-    Serial.print(F("samplems    = ")); Serial.print(cfg.tcsSampleMs);
-    Serial.println(F(" ms"));
     Serial.print(F("maxdist     = ")); Serial.println(cfg.maxColorDist);
-    Serial.print(F("pulsedark   = ")); Serial.print(cfg.pulseDark);
-    Serial.println(F(" us (kein Licht)"));
-    Serial.print(F("pulselight  = ")); Serial.print(cfg.pulseLight);
-    Serial.println(F(" us (max Licht)"));
 }
 
 // ---------------------------------------------------------------
@@ -146,10 +140,7 @@ static void cmdSet(char* args) {
     else if (strcmp(param, "feedspeed") == 0)  cfg.feedStepUs       = val;
     else if (strcmp(param, "homespeed") == 0)  cfg.homeStepUs       = val;
     else if (strcmp(param, "samples") == 0)    cfg.colorReadSamples = val;
-    else if (strcmp(param, "samplems") == 0)   cfg.tcsSampleMs      = val;
     else if (strcmp(param, "maxdist") == 0)    cfg.maxColorDist     = val;
-    else if (strcmp(param, "pulsedark") == 0)  cfg.pulseDark       = val;
-    else if (strcmp(param, "pulselight") == 0) cfg.pulseLight      = val;
     else {
         Serial.print(F("Unbekannt: ")); Serial.println(param);
         return;
@@ -203,26 +194,25 @@ static void cmdColor() {
 
 // ---------------------------------------------------------------
 static void cmdRaw() {
-    RGB raw = tcs_read();
-    Serial.print(F("Pulsdauer: R=")); Serial.print(raw.r);
-    Serial.print(F(" G=")); Serial.print(raw.g);
-    Serial.print(F(" B=")); Serial.print(raw.b);
-    Serial.print(F(" C=")); Serial.println(raw.c);
-
-    if (raw.r > 0 || raw.g > 0 || raw.b > 0) {
-        uint16_t r8 = constrain(map(raw.r, cfg.pulseDark, cfg.pulseLight, 0, 255), 0, 255);
-        uint16_t g8 = constrain(map(raw.g, cfg.pulseDark, cfg.pulseLight, 0, 255), 0, 255);
-        uint16_t b8 = constrain(map(raw.b, cfg.pulseDark, cfg.pulseLight, 0, 255), 0, 255);
-        Serial.print(F("RGB:       ")); Serial.print(r8);
-        Serial.print(F(",")); Serial.print(g8);
-        Serial.print(F(",")); Serial.println(b8);
-
-        int16_t hue; uint16_t sat, val;
-        readColorHSV(&hue, &sat, &val, &r8, &g8, &b8);
-        Serial.print(F("HSV:       H=")); Serial.print(hue);
-        Serial.print(F(" S=")); Serial.print(sat);
-        Serial.print(F(" V=")); Serial.println(val);
+    SpectralData sd = color_sensor_read();
+    Serial.print(F("F1-F8: "));
+    for (uint8_t k = 0; k < 8; k++) {
+        Serial.print(sd.ch[k]); Serial.print(F(" "));
     }
+    Serial.println();
+    Serial.print(F("Clear=")); Serial.print(sd.ch[8]);
+    Serial.print(F(" NIR=")); Serial.println(sd.ch[9]);
+
+    RGB raw = color_sensor_to_rgb(sd);
+    Serial.print(F("RGB: ")); Serial.print(raw.r);
+    Serial.print(F(",")); Serial.print(raw.g);
+    Serial.print(F(",")); Serial.println(raw.b);
+
+    int16_t hue; uint16_t sat, val, r8, g8, b8;
+    readColorHSV(&hue, &sat, &val, &r8, &g8, &b8);
+    Serial.print(F("HSV: H=")); Serial.print(hue);
+    Serial.print(F(" S=")); Serial.print(sat);
+    Serial.print(F(" V=")); Serial.println(val);
 }
 
 // ---------------------------------------------------------------
@@ -325,8 +315,8 @@ static void processCommand(char* cmd) {
         cmdRaw();
     }
     else if (strcmp(cmd, "clear") == 0) {
-        uint16_t c = tcs_read_clear();
-        Serial.print(F("Clear: ")); Serial.println(c);
+        SpectralData sd = color_sensor_read();
+        Serial.print(F("Clear: ")); Serial.println(sd.ch[8]);
     }
     else if (strcmp(cmd, "baseline") == 0) {
         measureBaseline();
@@ -401,13 +391,17 @@ static void processCommand(char* cmd) {
             Serial.println(F("OK"));
         }
         else if (strcmp(args, "sensor") == 0) {
-            Serial.println(F("Farbsensor Rohwerte (5 Messungen):"));
-            for (int i = 0; i < 5; i++) {
-                RGB raw = tcs_read();
-                Serial.print(F("  R=")); Serial.print(raw.r);
-                Serial.print(F(" G=")); Serial.print(raw.g);
-                Serial.print(F(" B=")); Serial.print(raw.b);
-                Serial.print(F(" C=")); Serial.println(raw.c);
+            Serial.print(F("AS7341 Status: "));
+            Serial.println(color_sensor_ok() ? F("OK") : F("NICHT VERBUNDEN"));
+            Serial.println(F("Spektraldaten (3 Messungen):"));
+            for (int i = 0; i < 3; i++) {
+                SpectralData sd = color_sensor_read();
+                Serial.print(F("  F1-F8: "));
+                for (uint8_t k = 0; k < 8; k++) {
+                    Serial.print(sd.ch[k]); Serial.print(F(" "));
+                }
+                Serial.print(F("C=")); Serial.print(sd.ch[8]);
+                Serial.print(F(" NIR=")); Serial.println(sd.ch[9]);
                 delay(200);
             }
         }

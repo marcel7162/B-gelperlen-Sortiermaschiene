@@ -39,10 +39,7 @@ void cfgDefaults() {
     cfg.feedStepUs       = FEED_STEP_US;
     cfg.homeStepUs       = HOME_STEP_US;
     cfg.colorReadSamples = COLOR_READ_SAMPLES;
-    cfg.tcsSampleMs      = TCS_SAMPLE_MS;
     cfg.maxColorDist     = MAX_COLOR_DISTANCE;
-    cfg.pulseDark        = 80;
-    cfg.pulseLight       = 5;
 }
 
 void saveCfg() {
@@ -183,10 +180,11 @@ bool loadCal() {
 }
 
 // =============================================================
-//  Perlenerkennung
+//  Perlenerkennung (nicht mehr aktiv benutzt, aber fuer Shell)
 // =============================================================
 bool beadDetected() {
-    uint16_t c    = tcs_read_clear_fast();
+    SpectralData sd = color_sensor_read();
+    uint16_t c    = sd.ch[8];
     uint16_t diff = (c > cal.baseC) ? (c - cal.baseC) : (cal.baseC - c);
     if (debugMode) {
         Serial.print(F("  [det] C=")); Serial.print(c);
@@ -231,12 +229,18 @@ void readColorHSV(int16_t* hue, uint16_t* sat, uint16_t* val,
     uint8_t valid = 0;
 
     for (int s = 0; s < cfg.colorReadSamples; s++) {
-        RGB raw = tcs_read();
+        SpectralData sd = color_sensor_read();
+        RGB raw = color_sensor_to_rgb(sd);
         if (debugMode) {
             Serial.print(F("  [raw] R=")); Serial.print(raw.r);
             Serial.print(F(" G=")); Serial.print(raw.g);
             Serial.print(F(" B=")); Serial.print(raw.b);
             Serial.print(F(" C=")); Serial.println(raw.c);
+            Serial.print(F("  [spk] "));
+            for (uint8_t k = 0; k < 10; k++) {
+                Serial.print(sd.ch[k]); Serial.print(F(" "));
+            }
+            Serial.println();
         }
         if (raw.r == 0 && raw.g == 0 && raw.b == 0) continue;
         sumR += raw.r;
@@ -251,13 +255,9 @@ void readColorHSV(int16_t* hue, uint16_t* sat, uint16_t* val,
         return;
     }
 
-    uint16_t avgR = sumR / valid;
-    uint16_t avgG = sumG / valid;
-    uint16_t avgB = sumB / valid;
-
-    uint16_t r8 = constrain(map(avgR, cfg.pulseDark, cfg.pulseLight, 0, 255), 0, 255);
-    uint16_t g8 = constrain(map(avgG, cfg.pulseDark, cfg.pulseLight, 0, 255), 0, 255);
-    uint16_t b8 = constrain(map(avgB, cfg.pulseDark, cfg.pulseLight, 0, 255), 0, 255);
+    uint16_t r8 = sumR / valid;
+    uint16_t g8 = sumG / valid;
+    uint16_t b8 = sumB / valid;
 
     *outR = r8;
     *outG = g8;
@@ -354,10 +354,11 @@ bool homeSorter() {
 // =============================================================
 void measureBaseline() {
     uint32_t sum = 0;
-    for (int i = 0; i < 8; i++) {
-        sum += tcs_read_clear();
+    for (int i = 0; i < 4; i++) {
+        SpectralData sd = color_sensor_read();
+        sum += sd.ch[8];
     }
-    cal.baseC = sum / 8;
+    cal.baseC = sum / 4;
     Serial.print(F("Baseline Clear: "));
     Serial.println(cal.baseC);
 }
@@ -527,15 +528,23 @@ void startupWizard() {
     beepOK();
     Serial.println(F("     Beep OK\r\n"));
 
-    // 2) Farbsensor Rohwerte
-    Serial.println(F("[2] Farbsensor Rohwerte:"));
-    for (int i = 0; i < 3; i++) {
-        RGB raw = tcs_read();
-        Serial.print(F("     R=")); Serial.print(raw.r);
-        Serial.print(F(" G=")); Serial.print(raw.g);
-        Serial.print(F(" B=")); Serial.print(raw.b);
-        Serial.print(F(" C=")); Serial.println(raw.c);
-        delay(200);
+    // 2) Farbsensor
+    Serial.println(F("[2] AS7341 Spektralsensor:"));
+    if (color_sensor_ok()) {
+        SpectralData sd = color_sensor_read();
+        Serial.print(F("     F1-F8: "));
+        for (uint8_t k = 0; k < 8; k++) {
+            Serial.print(sd.ch[k]); Serial.print(F(" "));
+        }
+        Serial.println();
+        Serial.print(F("     Clear=")); Serial.print(sd.ch[8]);
+        Serial.print(F(" NIR=")); Serial.println(sd.ch[9]);
+        RGB rgb = color_sensor_to_rgb(sd);
+        Serial.print(F("     RGB: ")); Serial.print(rgb.r);
+        Serial.print(F(",")); Serial.print(rgb.g);
+        Serial.print(F(",")); Serial.println(rgb.b);
+    } else {
+        Serial.println(F("     NICHT VERBUNDEN!"));
     }
 
     // 3) Motoren
@@ -583,7 +592,8 @@ void setup() {
     Serial.begin(115200);
     delay(200);
     Serial.println(F("\r\n========================================"));
-    Serial.println(F(" Buegelperlen-Sortiermaschine v2.0"));
+    Serial.println(F(" Buegelperlen-Sortiermaschine v3.0"));
+    Serial.println(F(" AS7341 Spektralsensor"));
     Serial.println(F(" 'help' fuer Befehle"));
     Serial.println(F("========================================"));
 
@@ -592,7 +602,13 @@ void setup() {
     pinMode(PIN_SORT_HOME, INPUT_PULLUP);
 
     stepper_init();
-    tcs_init();
+    if (!color_sensor_init()) {
+        Serial.println(F("FEHLER: AS7341 nicht gefunden!"));
+        Serial.println(F("  Pruefe Verkabelung: SDA=PB11, SCL=PB10"));
+        beepError();
+    } else {
+        Serial.println(F("AS7341 Sensor OK"));
+    }
 
     cfgDefaults();
     bool fromEeprom = loadCal();
